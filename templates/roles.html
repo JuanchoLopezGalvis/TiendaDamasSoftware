@@ -96,7 +96,7 @@
                         <label class="opcion opcion-perm">
                             <input type="checkbox" name="permisos" value="{{ p.pk }}"
                                    {% if p.pk in marcados %}checked{% endif %}>
-                            {{ p.name }}
+                            {{ p.nombre_es }}
                         </label>
                         {% endfor %}
                     </div>

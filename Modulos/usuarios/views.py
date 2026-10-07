@@ -8,8 +8,24 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 # Create your views here.
+ACCIONES = {
+    'add': 'Agregar',
+    'change': 'Modificar',
+    'delete': 'Eliminar',
+    'view': 'Ver',
+}
 
-
+def nombre_permiso(p):
+    """Devuelve el nombre del permiso en español."""
+    accion = p.codename.split('_', 1)[0]
+    modelo = p.content_type.model_class()
+    if (
+        accion in ACCIONES
+        and modelo is not None
+        and p.codename == f'{accion}_{modelo._meta.model_name}'
+    ):
+        return f'{ACCIONES[accion]} {modelo._meta.verbose_name}'
+    return p.name
 
 @login_required
 def panel(request):
@@ -75,10 +91,12 @@ def roles_permisos(request):
         'content_type__app_label', 'content_type__model', 'codename'
     )
     # Agrupados por modelo: "usuarios | usuario", "auth | grupo", etc.
-    bloques = [
-        {'titulo': str(ct), 'permisos': list(items)}
-        for ct, items in groupby(permisos, key=lambda p: p.content_type)
-    ]
+    bloques = []
+    for ct, items in groupby(permisos, key=lambda p: p.content_type):
+        lista = list(items)
+        for p in lista:
+            p.nombre_es = nombre_permiso(p)
+        bloques.append({'titulo': str(ct), 'permisos': lista})
 
     return render(request, 'roles.html', {
         'grupos': grupos,
