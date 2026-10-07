@@ -10,10 +10,10 @@
 {% block content %}
 <div class="roles-wrap">
 
-    <h1 class="roles-titulo">Gestión de roles y permisos</h1>
-    <p class="roles-sub">RF-USR-05, RF-USR-06, Creación y edición de roles</p>
+    <h1 class="roles-titulo"></h1>
 
-    <span class="rol-badge">Rol: Gerente</span>
+
+    <span class="rol-badge"></span>
 
     {% if messages %}
         {% for m in messages %}
@@ -53,8 +53,15 @@
             <form method="post" class="nuevo-rol">
                 {% csrf_token %}
                 <input type="hidden" name="accion" value="nuevo">
-                <input type="text" name="nombre" maxlength="150" placeholder="Nombre del nuevo rol" required>
-                <button type="submit" class="btn-primario">+ Nuevo rol</button>
+
+                <div class="campo">
+                    <label for="nombre_rol">Nombre del nuevo rol</label>
+
+                    <div class="fila-rol">
+                        <input type="text" id="nombre_rol" name="nombre" maxlength="150" required>
+                        <button type="submit" class="btn-crear">+ Nuevo rol</button>
+                    </div>
+                </div>
             </form>
         </section>
 
@@ -99,6 +106,7 @@
                 <p class="nota">Los cambios se aplican de inmediato a todos los usuarios con este rol.</p>
 
                 <button type="submit" class="btn-primario">Guardar cambios</button>
+                <button type="submit" class="btn-primario">Eliminar Rol</button>
             </form>
             {% else %}
                 <p class="nota">Crea un rol para poder asignarle permisos.</p>
