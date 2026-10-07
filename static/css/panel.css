@@ -1,0 +1,524 @@
+/* ================================================
+   VARIABLES DE TEMA
+   ================================================ */
+:root {
+  --bg: #e8e8ec;
+  --card: #ffffff;
+  --border: #cfcfd4;
+  --text: #222222;
+  --title: #2b2b30;
+  --muted: #6b6b72;
+  --label: #5b5b62;
+
+  --input-bg: #fafafa;
+  --input-border: #8d8d93;
+  --soft: #f1f1f4;
+  --row-border: #d9d9de;
+
+  --primary: #3b4a8c;
+  --primary-hover: #2f3c73;
+
+  --badge-bg: #dcdff2;
+  --badge-text: #3b4a8c;
+
+  --btn2-bg: #f4f4f6;
+  --btn2-hover: #e6e6ea;
+
+  --info-bg: #dfe2f3;
+  --info-border: #3b4a8c;
+  --info-text: #333333;
+
+  --warn-bg: #fbebc8;
+  --warn-border: #b9741a;
+  --warn-text: #6b4200;
+
+  --ok-bg: #d9f0de;
+  --ok-text: #1e7a3a;
+  --off-bg: #e3e3e8;
+  --off-text: #555555;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #010409;
+  --card: #0D1117;
+  --border: #30363d;
+  --text: #e6edf3;
+  --title: #ffffff;
+  --muted: #8b949e;
+  --label: #9da7b3;
+
+  --input-bg: #161b22;
+  --input-border: #484f58;
+  --soft: #161b22;
+  --row-border: #21262C;
+
+  --primary: #2f6feb;
+  --primary-hover: #2a62d1;
+
+  --badge-bg: #1b2a4a;
+  --badge-text: #8fb3ff;
+
+  --btn2-bg: #21262C;
+  --btn2-hover: #2a3038;
+
+  --info-bg: #14213d;
+  --info-border: #2f6feb;
+  --info-text: #d0d7de;
+
+  --warn-bg: #3a2a0c;
+  --warn-border: #d29922;
+  --warn-text: #f0c36d;
+
+  --ok-bg: #12351f;
+  --ok-text: #56d364;
+  --off-bg: #21262C;
+  --off-text: #8b949e;
+
+  color-scheme: dark;
+}
+html {
+  background-color: var(--bg);
+}
+
+/* ================================================
+   BASE
+   ================================================ */
+* {
+  box-sizing: border-box;
+}
+
+body.panel-body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, "Segoe UI", Ubuntu, Arial, sans-serif;
+}
+
+/* ================================================
+   BARRA LATERAL (siempre oscura)
+   ================================================ */
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #0D1117;
+  border-right: 1px solid #21262C;
+  padding: 20px 16px;
+  transition: margin-left .3s ease;
+}
+
+body.menu-cerrado .sidebar {
+  margin-left: -250px;
+}
+
+.sidebar-brand {
+  font-size: 1.1em;
+  font-weight: 600;
+  padding: 0 10px 20px;
+  color: #fff;
+}
+
+/* Menú (basado en Uiverse by reglobby) */
+.menu {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: #0D1117;
+  justify-content: center;
+  border-radius: 5px;
+  gap: 2px;
+}
+
+.value {
+  background-color: transparent;
+  border: none;
+  padding: 10px;
+  color: #c9d1d9;
+  display: flex;
+  position: relative;
+  gap: 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.95em;
+}
+
+.value:not(:active):hover,
+.value:focus {
+  background-color: #21262C;
+}
+
+.value:focus,
+.value:active,
+.value.active {
+  background-color: #1A1F24;
+  outline: none;
+}
+
+.value::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: -10px;
+  width: 5px;
+  height: 80%;
+  background-color: #2F81F7;
+  border-radius: 5px;
+  opacity: 0;
+}
+
+.value:focus::before,
+.value:active::before,
+.value.active::before {
+  opacity: 1;
+}
+
+.sidebar-user {
+  margin-top: auto;
+  padding: 16px 10px 0;
+  border-top: 1px solid #21262C;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-name {
+  font-size: 0.85em;
+  color: #7D8590;
+}
+
+.logout-btn {
+  background-color: #21262C;
+  border: none;
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: .3s ease-in-out;
+}
+
+.logout-btn:hover {
+  background-color: #b62324;
+}
+.theme-btn {
+  background-color: #21262C;
+  border: none;
+  color: #c9d1d9;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: .3s ease-in-out;
+}
+
+.theme-btn:hover {
+  background-color: #2F81F7;
+  color: #fff;
+}
+
+/* ================================================
+   CONTENIDO Y BARRA SUPERIOR
+   ================================================ */
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 40px;
+}
+
+.content h1 {
+  margin-top: 0;
+  color: var(--title);
+}
+
+.content p {
+  color: var(--muted);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.menu-toggle {
+  background-color: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  width: 40px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: .2s ease-in-out;
+}
+
+.menu-toggle:hover {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ================================================
+   COMPONENTES COMPARTIDOS
+   (algunos incluyen los nombres antiguos de signup y roles)
+   ================================================ */
+
+/* Contenedor de página, centrado horizontalmente */
+.pagina,
+.registro-wrap,
+.roles-wrap {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+.pagina-titulo,
+.roles-titulo {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.pagina-sub,
+.roles-sub {
+  margin: 2px 0 22px;
+  font-size: 16px;
+}
+
+/* Etiqueta "Rol: Gerente" */
+.rol-badge {
+  display: inline-block;
+  background-color: var(--badge-bg);
+  color: var(--badge-text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 3px;
+  margin-bottom: 18px;
+}
+
+/* Tarjeta */
+.card,
+.registro-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 30px 30px 32px;
+}
+
+.card-titulo {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--label);
+}
+
+/* Botones */
+.btn-primario,
+.btn-crear {
+  background-color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  color: #fff;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primario:hover,
+.btn-crear:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secundario,
+.btn-cancelar {
+  background-color: var(--btn2-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-secundario:hover,
+.btn-cancelar:hover {
+  background-color: var(--btn2-hover);
+}
+
+.btn-chico {
+  padding: 5px 14px;
+  font-size: 14px;
+}
+
+/* Campos de formulario */
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--label);
+}
+
+.campo input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+
+.campo select,
+.campo input.buscador {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px dashed var(--input-border);
+  border-radius: 4px;
+  background-color: var(--soft);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+
+.campo select:invalid {
+  color: var(--muted);
+}
+
+.campo input::placeholder {
+  color: var(--muted);
+}
+
+.campo input:focus,
+.campo select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 74, 140, 0.25);
+}
+
+/* Barra de filtros */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.filtros .campo input,
+.filtros .campo select {
+  height: 48px;
+  font-size: 16px;
+}
+
+.filtros .btn-secundario {
+  height: 48px;
+}
+
+/* Tabla */
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+
+.tabla th {
+  background-color: var(--soft);
+  text-align: left;
+  font-weight: 700;
+  color: var(--label);
+  padding: 14px;
+  border-bottom: 2px solid var(--border);
+}
+
+.tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--row-border);
+  color: var(--text);
+}
+
+.tabla td:last-child,
+.tabla th:last-child {
+  text-align: right;
+}
+
+.tabla.sin-derecha td:last-child,
+.tabla.sin-derecha th:last-child {
+  text-align: left;
+}
+
+/* Etiquetas de estado */
+.pill {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pill-ok {
+  background-color: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.pill-off {
+  background-color: var(--off-bg);
+  color: var(--off-text);
+}
+
+/* Avisos */
+.aviso {
+  background-color: var(--info-bg);
+  border-left: 3px solid var(--info-border);
+  color: var(--info-text);
+  padding: 12px 18px;
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+
+.aviso-warn {
+  background-color: var(--warn-bg);
+  border-left-color: var(--warn-border);
+  color: var(--warn-text);
+  font-size: 16px;
+  margin: 0;
+}
+
+/* ================================================
+   PANTALLAS PEQUEÑAS
+   ================================================ */
+@media (max-width: 700px) {
+  body.panel-body {
+    flex-direction: column;
+  }
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+  }
+  body.menu-cerrado .sidebar {
+    display: none;
+  }
+  .content {
+    padding: 20px;
+  }
+}

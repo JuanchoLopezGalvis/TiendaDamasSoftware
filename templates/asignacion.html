@@ -1,0 +1,95 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Asignación de roles{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Asignación de roles</h1>
+    <p class="pagina-sub">RF-USR-07, RF-USR-08, RF-USR-11, Asignación y revocación de accesos</p>
+
+    <span class="rol-badge">Rol: Gerente</span>
+
+    <section class="card">
+
+        <div class="filtros">
+            <div class="campo">
+                <label for="buscar">Buscar usuario</label>
+                <input type="text" id="buscar" style="width: 307px;">
+            </div>
+
+            <div class="campo">
+                <label for="estado">Estado</label>
+                <select id="estado" style="width: 195px;">
+                    <option value="">Activo / Inactivo</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Cargo - Rol</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="filasUsuarios">
+                <tr data-nombre="Juan Miguel" data-estado="activo">
+                    <td>Juan Miguel</td>
+                    <td>Gerente</td>
+                    <td><span class="pill pill-ok">Activo</span></td>
+                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
+                </tr>
+                <tr data-nombre="Juan Diego" data-estado="activo">
+                    <td>Juan Diego</td>
+                    <td>Auxiliar Administrativo</td>
+                    <td><span class="pill pill-ok">Activo</span></td>
+                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
+                </tr>
+                <tr data-nombre="Francisco" data-estado="inactivo">
+                    <td>Francisco</td>
+                    <td>Vendedor</td>
+                    <td><span class="pill pill-off">Inactivo</span></td>
+                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
+                </tr>
+                <tr data-nombre="Jhonatan" data-estado="inactivo">
+                    <td>Jhonatan</td>
+                    <td>Vendedor</td>
+                    <td><span class="pill pill-off">Inactivo</span></td>
+                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="aviso aviso-warn">
+            Desactivar una cuenta no elimina su historial. La revocación de un rol surte efecto de inmediato.
+        </div>
+
+    </section>
+</div>
+
+<script>
+    // Filtro en vivo (datos de ejemplo)
+    var inputBuscar = document.getElementById('buscar');
+    var selectEstado = document.getElementById('estado');
+    var filas = document.querySelectorAll('#filasUsuarios tr');
+
+    function filtrar() {
+        var q = inputBuscar.value.toLowerCase();
+        var est = selectEstado.value;
+
+        filas.forEach(function (tr) {
+            var okTexto = tr.dataset.nombre.toLowerCase().indexOf(q) !== -1;
+            var okEstado = !est || tr.dataset.estado === est;
+            tr.style.display = (okTexto && okEstado) ? '' : 'none';
+        });
+    }
+
+    inputBuscar.addEventListener('input', filtrar);
+    selectEstado.addEventListener('change', filtrar);
+</script>
+{% endblock %}

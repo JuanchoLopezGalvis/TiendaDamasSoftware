@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{% block title %}Panel{% endblock %} - TiendaDamas</title>
+
+    <!-- Aplica el tema y el color de fondo ANTES de pintar (evita parpadeos) -->
+    <script>
+        (function () {
+            var t = 'light';
+            try {
+                t = localStorage.getItem('tema');
+                if (!t) {
+                    t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+            } catch (e) {}
+            var root = document.documentElement;
+            root.setAttribute('data-theme', t);
+            root.style.backgroundColor = (t === 'dark') ? '#010409' : '#e8e8ec';
+        })();
+    </script>
+
+    <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="panel-body">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">TiendaDamas</div>
+
+        <nav class="menu">
+            <a class="value {% if request.resolver_match.url_name == 'registro_usuario' %}active{% endif %}"
+               href="{% url 'registro_usuario' %}">Registro de usuario</a>
+
+            <a class="value {% if request.resolver_match.url_name == 'roles_permisos' %}active{% endif %}"
+               href="{% url 'roles_permisos' %}">Gestión de roles y permisos</a>
+
+            <a class="value {% if request.resolver_match.url_name == 'asignacion_roles' %}active{% endif %}"
+               href="{% url 'asignacion_roles' %}">Asignación de roles</a>
+
+            <a class="value {% if request.resolver_match.url_name == 'bitacora_auditoria' %}active{% endif %}"
+               href="{% url 'bitacora_auditoria' %}">Bitácora de auditoría</a>
+        </nav>
+
+        <div class="sidebar-user">
+            <span class="user-name">{{ user.empleado.nombre_completo|default:user.username }}</span>
+
+            <!-- Botón de tema: una sola vez, dentro del menú -->
+            <button type="button" class="theme-btn" id="themeToggle"></button>
+
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Cerrar sesión</button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="topbar">
+            <button type="button" class="menu-toggle" id="menuToggle"
+                    aria-label="Mostrar u ocultar menú">&#9776;</button>
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        (function () {
+            var body = document.body;
+            var root = document.documentElement;
+
+            /* ---- Menú desplegable ---- */
+            try {
+                if (localStorage.getItem('menuCerrado') === '1') {
+                    body.classList.add('menu-cerrado');
+                }
+            } catch (e) {}
+
+            document.getElementById('menuToggle').addEventListener('click', function () {
+                body.classList.toggle('menu-cerrado');
+                try {
+                    localStorage.setItem('menuCerrado', body.classList.contains('menu-cerrado') ? '1' : '0');
+                } catch (e) {}
+            });
+
+            /* ---- Modo claro / oscuro ---- */
+            var btnTema = document.getElementById('themeToggle');
+
+            function pintarBoton() {
+                var oscuro = root.getAttribute('data-theme') === 'dark';
+                btnTema.textContent = oscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+            }
+            pintarBoton();
+
+            btnTema.addEventListener('click', function () {
+                var nuevo = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-theme', nuevo);
+                root.style.backgroundColor = (nuevo === 'dark') ? '#010409' : '#e8e8ec';
+                try { localStorage.setItem('tema', nuevo); } catch (e) {}
+                pintarBoton();
+            });
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+    <h1>Bienvenido, {{ user.empleado.nombre_completo|default:user.username }}</h1>
+    <p>Selecciona una opción del menú lateral para comenzar.</p>
+{% endblock %}

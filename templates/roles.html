@@ -1,0 +1,110 @@
+{% extends 'base_panel.html' %}
+{% load static %}
+
+{% block title %}Gestión de roles y permisos{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilosRoles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="roles-wrap">
+
+    <h1 class="roles-titulo">Gestión de roles y permisos</h1>
+    <p class="roles-sub">RF-USR-05, RF-USR-06, Creación y edición de roles</p>
+
+    <span class="rol-badge">Rol: Gerente</span>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="roles-grid">
+
+        <!-- ========== Tarjeta izquierda: roles existentes ========== -->
+        <section class="card">
+            <h2 class="card-titulo">Roles existentes</h2>
+
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Usuarios</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in grupos %}
+                    <tr class="{% if seleccionado and g.pk == seleccionado.pk %}fila-sel{% endif %}">
+                        <td>{{ g.name }}</td>
+                        <td>{{ g.num_usuarios }}</td>
+                        <td><a class="btn-editar" href="?rol={{ g.pk }}">Editar</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">Aún no hay roles. Crea el primero abajo.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <form method="post" class="nuevo-rol">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="nuevo">
+                <input type="text" name="nombre" maxlength="150" placeholder="Nombre del nuevo rol" required>
+                <button type="submit" class="btn-primario">+ Nuevo rol</button>
+            </form>
+        </section>
+
+        <!-- ========== Tarjeta derecha: permisos ========== -->
+        <section class="card">
+            {% if seleccionado %}
+            <form method="post" id="formPermisos">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="guardar">
+
+                <fieldset class="caja-roles">
+                    <legend>Rol</legend>
+                    {% for g in grupos %}
+                    <label class="opcion">
+                        <input type="radio" name="rol" value="{{ g.pk }}"
+                               {% if g.pk == seleccionado.pk %}checked{% endif %}
+                               onchange="window.location='?rol={{ g.pk }}'">
+                        {{ g.name }}
+                    </label>
+                    {% endfor %}
+                </fieldset>
+
+                <h2 class="card-titulo permisos-titulo">
+                    Permisos del rol: {{ seleccionado.name }}
+                </h2>
+
+                <div class="permisos-scroll">
+                    {% for b in bloques %}
+                    <div class="perm-grupo">
+                        <p class="perm-grupo-titulo">{{ b.titulo }}</p>
+                        {% for p in b.permisos %}
+                        <label class="opcion opcion-perm">
+                            <input type="checkbox" name="permisos" value="{{ p.pk }}"
+                                   {% if p.pk in marcados %}checked{% endif %}>
+                            {{ p.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <p class="nota">Los cambios se aplican de inmediato a todos los usuarios con este rol.</p>
+
+                <button type="submit" class="btn-primario">Guardar cambios</button>
+            </form>
+            {% else %}
+                <p class="nota">Crea un rol para poder asignarle permisos.</p>
+            {% endif %}
+        </section>
+
+    </div>
+</div>
+{% endblock %}

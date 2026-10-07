@@ -1,0 +1,87 @@
+{% extends 'base_panel.html' %}
+{% load static %}
+
+{% block title %}Registro de usuario{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilosSignup.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="registro-wrap">
+
+
+
+
+    <form class="registro-card" id="formCuenta" method="post">
+        {% csrf_token %}
+
+        <div class="registro-grid">
+
+            <div class="campo">
+                <label for="nombre">Nombre completo</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+
+            <div class="campo">
+                <label for="documento">Documento de identidad</label>
+                <input type="text" id="documento" name="documento" required>
+            </div>
+
+            <div class="campo">
+                <label for="usuario">Usuario</label>
+                <input type="text" id="usuario" name="usuario" required>
+            </div>
+
+            <div class="campo">
+                <label for="cargo">Cargo</label>
+                <select id="cargo" name="cargo" required>
+                    <option value="" selected disabled>Seleccionar cargo</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="auxiliar">Auxiliar administrativo</option>
+                    <option value="vendedor">Vendedor</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="correo">Correo</label>
+                <input type="email" id="correo" name="correo" required>
+            </div>
+
+            <div class="campo vacio"></div>
+
+            <div class="campo">
+                <label for="empleado">Empleado asociado (Nómina)</label>
+                <input type="text" id="empleado" name="empleado" list="lista-empleados"
+                       class="buscador" placeholder="Buscar empleado…" required>
+                <datalist id="lista-empleados">
+                    <option value="Empleado 1"></option>
+                    <option value="Empleado 2"></option>
+                    <option value="Empleado 3"></option>
+                </datalist>
+            </div>
+
+            <div class="campo">
+                <label for="rol">Rol inicial</label>
+                <select id="rol" name="rol" required>
+                    <option value="" selected disabled>Gerente / Auxiliar administrativo / Vendedor</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="auxiliar">Auxiliar administrativo</option>
+                    <option value="vendedor">Vendedor</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="aviso">
+            La contraseña temporal se enviará al correo registrado. El usuario deberá cambiarla en su primer ingreso.
+        </div>
+
+        <div class="acciones">
+            <button type="submit" class="btn-crear">Crear cuenta</button>
+            <button type="reset" class="btn-cancelar">Cancelar</button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

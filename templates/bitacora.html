@@ -1,0 +1,92 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Bitácora de auditoría{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Bitácora de auditoría</h1>
+    <p class="pagina-sub">RF-USR-12, Registro de operaciones críticas</p>
+
+    <span class="rol-badge">Rol: Gerente</span>
+
+    <section class="card">
+
+        <div class="filtros">
+            <div class="campo">
+                <label for="desde">Fecha desde</label>
+                <input type="date" id="desde">
+            </div>
+
+            <div class="campo">
+                <label for="hasta">Fecha hasta</label>
+                <input type="date" id="hasta">
+            </div>
+
+            <div class="campo">
+                <label for="tipo">Tipo de evento</label>
+                <select id="tipo" style="width: 196px;">
+                    <option value="">Todos</option>
+                    <option value="cambio_rol">Cambio de rol</option>
+                    <option value="inicio_sesion">Inicio de sesión</option>
+                    <option value="acceso_denegado">Acceso denegado</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn-secundario" id="btnFiltrar">Filtrar</button>
+        </div>
+
+        <table class="tabla sin-derecha" style="margin-bottom: 0;">
+            <thead>
+                <tr>
+                    <th>Fecha y hora</th>
+                    <th>Usuario</th>
+                    <th>Evento</th>
+                    <th>Detalle</th>
+                </tr>
+            </thead>
+            <tbody id="filasBitacora">
+                <tr data-fecha="2026-09-23" data-tipo="cambio_rol">
+                    <td>23/09/2026 09:14</td>
+                    <td>Luis Vivas</td>
+                    <td>Cambio de rol</td>
+                    <td>Ana Torres lo puso Inactivo</td>
+                </tr>
+                <tr data-fecha="2026-09-23" data-tipo="inicio_sesion">
+                    <td>23/09/2026 08:50</td>
+                    <td>Carlos Ruiz</td>
+                    <td>Inicio de sesión</td>
+                    <td>Exitoso</td>
+                </tr>
+                <tr data-fecha="2026-09-22" data-tipo="acceso_denegado">
+                    <td>22/09/2026 19:02</td>
+                    <td>Desconocido</td>
+                    <td>Acceso denegado</td>
+                    <td>5 intentos fallidos, cuenta bloqueada</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </section>
+</div>
+
+<script>
+    // Filtro (datos de ejemplo): luego lo reemplazas con una consulta a la base de datos
+    document.getElementById('btnFiltrar').addEventListener('click', function () {
+        var desde = document.getElementById('desde').value;
+        var hasta = document.getElementById('hasta').value;
+        var tipo = document.getElementById('tipo').value;
+
+        document.querySelectorAll('#filasBitacora tr').forEach(function (tr) {
+            var f = tr.dataset.fecha;
+            var ok = true;
+
+            if (desde && f < desde) ok = false;
+            if (hasta && f > hasta) ok = false;
+            if (tipo && tr.dataset.tipo !== tipo) ok = false;
+
+            tr.style.display = ok ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}
