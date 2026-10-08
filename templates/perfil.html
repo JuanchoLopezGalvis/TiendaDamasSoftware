@@ -1,0 +1,83 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Mi perfil{% endblock %}
+
+{% block content %}
+<div class="pagina pagina-perfil">
+
+    <h1 class="pagina-titulo">Mi perfil</h1>
+    <p class="pagina-sub">Información de tu cuenta</p>
+
+    <section class="card perfil-cabecera">
+        <div class="perfil-avatar-grande">{{ user.username|first|upper }}</div>
+        <div>
+            <h2 class="perfil-nombre-grande">{{ user.empleado.nombre_completo|default:user.username }}</h2>
+            <p class="perfil-usuario">@{{ user.username }}</p>
+            <div class="perfil-roles">
+                {% for r in roles %}
+                    <span class="rol-badge">{{ r.name }}</span>
+                {% empty %}
+                    <span class="pill pill-off">Sin rol asignado</span>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <div class="perfil-grid">
+
+        <section class="card">
+            <h2 class="card-titulo">Datos personales</h2>
+            <dl class="datos">
+                <dt>Nombre completo</dt>
+                <dd>{{ user.empleado.nombre_completo|default:"—" }}</dd>
+
+                <dt>Documento de identidad</dt>
+                <dd>{{ user.empleado.pk|default:"—" }}</dd>
+
+                <dt>Correo</dt>
+                <dd>{{ user.email|default:"—" }}</dd>
+            </dl>
+        </section>
+
+        <section class="card">
+            <h2 class="card-titulo">Cuenta</h2>
+            <dl class="datos">
+                <dt>Usuario</dt>
+                <dd>{{ user.username }}</dd>
+
+                <dt>Estado</dt>
+                <dd>
+                    {% if user.is_active %}
+                        <span class="pill pill-ok">Activo</span>
+                    {% else %}
+                        <span class="pill pill-off">Inactivo</span>
+                    {% endif %}
+                </dd>
+
+                <dt>Miembro desde</dt>
+                <dd>{{ user.date_joined|date:"d/m/Y" }}</dd>
+
+                <dt>Último ingreso</dt>
+                <dd>{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</dd>
+            </dl>
+
+            <a class="btn-secundario btn-enlace" href="{% url 'cambiar_clave' %}">Cambiar contraseña</a>
+        </section>
+
+    </div>
+
+    <section class="card">
+        <h2 class="card-titulo">Mis permisos</h2>
+        {% if permisos %}
+            <ul class="lista-perm">
+                {% for p in permisos %}
+                    <li>{{ p }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="nota">Tu rol todavía no tiene permisos asignados.</p>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock %}

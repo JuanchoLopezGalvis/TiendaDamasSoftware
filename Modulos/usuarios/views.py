@@ -39,6 +39,19 @@ def nombre_permiso(p):
 def panel(request):
     return render(request, 'panel.html')
 
+@login_required
+def perfil(request):
+    usuario = request.user
+    roles = usuario.groups.order_by('name')
+    permisos = sorted(
+        {nombre_permiso(p) for p in Permission.objects.filter(
+            group__user=usuario
+        ).select_related('content_type')}
+    )
+    return render(request, 'perfil.html', {
+        'roles': roles,
+        'permisos': permisos,
+    })
 
 def _seccion(request, titulo, descripcion):
     return render(request, 'seccion.html', {

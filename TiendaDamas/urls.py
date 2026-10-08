@@ -31,5 +31,5 @@ path('', usuario_views.panel, name='panel'),
     path('panel/asignacion-roles/', usuario_views.asignacion_roles, name='asignacion_roles'),
     path('panel/bitacora-auditoria/', usuario_views.bitacora_auditoria, name='bitacora_auditoria'),
     path('panel/cambiar-clave/', usuario_views.CambiarClaveView.as_view(), name='cambiar_clave'),
-
+    path('panel/perfil/', usuario_views.perfil, name='perfil'),
 ]

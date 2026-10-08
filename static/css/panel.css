@@ -751,3 +751,136 @@ body.menu-cerrado .sidebar {
   margin: 4px 0 0;
   padding-left: 18px;
 }
+/* ---------- Botón de perfil en el menú oscuro ---------- */
+.perfil-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #161b22;
+  border: 1px solid #21262C;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #e6edf3;
+  text-decoration: none;
+  transition: .2s ease-in-out;
+}
+
+.perfil-btn:hover,
+.perfil-btn.abierto {
+  background-color: #21262C;
+  border-color: #2F81F7;
+}
+
+.perfil-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #2F81F7;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perfil-nombre {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ---------- Página "Mi perfil" ---------- */
+.pagina-perfil .card {
+  margin-bottom: 22px;
+}
+
+.perfil-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.perfil-avatar-grande {
+  flex-shrink: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: #fff;
+  font-size: 36px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perfil-nombre-grande {
+  margin: 0;
+  font-size: 24px;
+  color: var(--title);
+}
+
+.perfil-usuario {
+  margin: 2px 0 10px;
+}
+
+.perfil-roles .rol-badge {
+  margin: 0 6px 0 0;
+}
+
+.perfil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.datos {
+  margin: 0 0 18px;
+}
+
+.datos dt {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--label);
+  margin-top: 14px;
+}
+
+.datos dd {
+  margin: 4px 0 0;
+  font-size: 16px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.btn-enlace {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.lista-perm {
+  margin: 0;
+  padding-left: 20px;
+  columns: 2;
+  color: var(--text);
+}
+
+.lista-perm li {
+  padding: 3px 0;
+}
+
+@media (max-width: 800px) {
+  .perfil-grid {
+    grid-template-columns: 1fr;
+  }
+  .lista-perm {
+    columns: 1;
+  }
+  .perfil-cabecera {
+    flex-direction: column;
+    text-align: center;
+  }
+}

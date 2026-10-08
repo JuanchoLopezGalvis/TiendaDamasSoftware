@@ -46,7 +46,11 @@
         </nav>
 
         <div class="sidebar-user">
-            <span class="user-name">{{ user.empleado.nombre_completo|default:user.username }}</span>
+           <a class="perfil-btn {% if request.resolver_match.url_name == 'perfil' %}abierto{% endif %}"
+              href="{% url 'perfil' %}">
+                <span class="perfil-avatar">{{ user.username|first|upper }}</span>
+                 <span class="perfil-nombre">{{ user.empleado.nombre_completo|default:user.username }}</span>
+            </a>
 
             <!-- Botón de tema: una sola vez, dentro del menú -->
             <button type="button" class="theme-btn" id="themeToggle"></button>
