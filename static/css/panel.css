@@ -456,7 +456,154 @@ body.menu-cerrado .sidebar {
   color: var(--text);
 }
 
-.tabla td:last-child,
+.tabla td:last-child,.roles-grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 26px;
+
+  align-items: stretch;
+
+}
+
+
+.btn-editar {
+
+  background-color: var(--btn2-bg);
+
+  border: 1px solid var(--input-border);
+
+  border-radius: 4px;
+
+  padding: 5px 14px;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  color: var(--text);
+
+  cursor: pointer;
+
+}
+
+
+.btn-editar:hover {
+
+  background-color: var(--btn2-hover);
+
+}
+
+
+.caja-roles {
+
+  border: 1px solid var(--border);
+
+  border-radius: 6px;
+
+  padding: 14px 30px 22px;
+
+  margin: 0 0 26px;
+
+}
+
+
+.caja-roles legend {
+
+  font-size: 15px;
+
+  font-weight: 700;
+
+  color: var(--label);
+
+  padding: 0 4px;
+
+}
+
+
+.opcion {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  font-size: 17px;
+
+  color: var(--text);
+
+  cursor: pointer;
+
+}
+
+
+.caja-roles .opcion {
+
+  padding: 8px 0 8px 6px;
+
+}
+
+
+.permisos-titulo {
+
+  margin-bottom: 16px;
+
+}
+
+
+.lista-permisos {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+
+  margin-bottom: 14px;
+
+}
+
+
+.opcion input[type="radio"],
+
+.opcion input[type="checkbox"] {
+
+  width: 20px;
+
+  height: 20px;
+
+  accent-color: var(--primary);
+
+  cursor: pointer;
+
+  margin: 0;
+
+}
+
+
+.nota {
+
+  font-size: 15px;
+
+  margin: 0 0 20px;
+
+}
+
+
+@media (max-width: 900px) {
+
+  .roles-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+}
+
+
 .tabla th:last-child {
   text-align: right;
 }
@@ -521,4 +668,86 @@ body.menu-cerrado .sidebar {
   .content {
     padding: 20px;
   }
+}
+/* ---------- Mensajes ---------- */
+.msg {
+  padding: 12px 18px;
+  border-radius: 4px;
+  margin-bottom: 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.msg-success {
+  background-color: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.msg-warning {
+  background-color: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.msg-error {
+  background-color: #fde3e3;
+  color: #8a1c1c;
+}
+
+:root[data-theme="dark"] .msg-error {
+  background-color: #3b1517;
+  color: #ff9b9b;
+}
+/* ---------- Botón "Cambiar contraseña" del menú ---------- */
+.sidebar-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  background-color: #21262C;
+  color: #c9d1d9;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.95em;
+  transition: .3s ease-in-out;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  background-color: #2F81F7;
+  color: #fff;
+}
+
+/* ---------- Página de cambiar contraseña ---------- */
+.pagina-estrecha {
+  max-width: 520px;
+}
+
+.form-clave {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-clave .campo input {
+  height: 40px;
+  font-size: 15px;
+}
+
+.error-campo {
+  color: #d1242f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .error-campo {
+  color: #ff9b9b;
+}
+
+.ayuda {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ayuda ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }

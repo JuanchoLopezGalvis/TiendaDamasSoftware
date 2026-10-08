@@ -1,0 +1,41 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Cambiar contraseña{% endblock %}
+
+{% block content %}
+<div class="pagina pagina-estrecha">
+
+    <h1 class="pagina-titulo">Cambiar contraseña</h1>
+    <p class="pagina-sub">Elige una contraseña nueva para tu cuenta.</p>
+
+    {% for m in messages %}
+        <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+    {% endfor %}
+
+    <form method="post" class="card form-clave">
+        {% csrf_token %}
+
+        {% for e in form.non_field_errors %}
+            <div class="msg msg-error">{{ e }}</div>
+        {% endfor %}
+
+        {% for campo in form %}
+        <div class="campo">
+            <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            {{ campo }}
+            {% for e in campo.errors %}
+                <span class="error-campo">{{ e }}</span>
+            {% endfor %}
+            {% if campo.help_text %}
+                <div class="ayuda">{{ campo.help_text|safe }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div>
+            <button type="submit" class="btn-primario">Guardar contraseña</button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

@@ -10,64 +10,60 @@
 {% block content %}
 <div class="registro-wrap">
 
+    <span class="rol-badge">Rol: Gerente</span>
 
-
+    {% for m in messages %}
+        <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+    {% endfor %}
 
     <form class="registro-card" id="formCuenta" method="post">
         {% csrf_token %}
 
         <div class="registro-grid">
 
-            <div class="campo">
-                <label for="nombre">Nombre completo</label>
-                <input type="text" id="nombre" name="nombre" required>
+            <!-- Empleado: combo con búsqueda por documento o nombre -->
+            <div class="campo combo" id="comboEmpleado">
+                <label for="empleadoBuscar">Empleado asociado (Nómina)</label>
+                <input type="text" id="empleadoBuscar" class="buscador"
+                       placeholder="Buscar por documento o nombre…" autocomplete="off">
+                <input type="hidden" name="empleado" id="empleadoId" value="{{ datos.empleado }}">
+
+                <ul class="combo-lista" id="comboLista" hidden>
+                    {% for e in empleados %}
+                    <li data-id="{{ e.pk }}" data-nombre="{{ e.nombre_completo }}">
+                        <span class="combo-id">{{ e.pk }}</span>
+                        <span>{{ e.nombre_completo }}</span>
+                    </li>
+                    {% endfor %}
+                    <li class="combo-vacio" id="comboVacio" hidden>Sin resultados</li>
+                </ul>
             </div>
 
             <div class="campo">
                 <label for="documento">Documento de identidad</label>
-                <input type="text" id="documento" name="documento" required>
+                <input type="text" id="documento" readonly tabindex="-1"
+                       placeholder="Se completa al elegir el empleado">
             </div>
 
             <div class="campo">
-                <label for="usuario">Usuario</label>
-                <input type="text" id="usuario" name="usuario" required>
-            </div>
-
-            <div class="campo">
-                <label for="cargo">Cargo</label>
-                <select id="cargo" name="cargo" required>
-                    <option value="" selected disabled>Seleccionar cargo</option>
-                    <option value="gerente">Gerente</option>
-                    <option value="auxiliar">Auxiliar administrativo</option>
-                    <option value="vendedor">Vendedor</option>
-                </select>
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username"
+                       value="{{ datos.username }}" required>
             </div>
 
             <div class="campo">
                 <label for="correo">Correo</label>
-                <input type="email" id="correo" name="correo" required>
-            </div>
-
-            <div class="campo vacio"></div>
-
-            <div class="campo">
-                <label for="empleado">Empleado asociado (Nómina)</label>
-                <input type="text" id="empleado" name="empleado" list="lista-empleados"
-                       class="buscador" placeholder="Buscar empleado…" required>
-                <datalist id="lista-empleados">
-                    <option value="Empleado 1"></option>
-                    <option value="Empleado 2"></option>
-                    <option value="Empleado 3"></option>
-                </datalist>
+                <input type="email" id="correo" name="correo"
+                       value="{{ datos.correo }}" required>
             </div>
 
             <div class="campo">
                 <label for="rol">Rol inicial</label>
                 <select id="rol" name="rol" required>
-                    <option value="" selected disabled>Gerente / Auxiliar administrativo / Vendedor</option>
-                    <option value="gerente">Gerente</option>
-                    <option value="auxiliar">Auxiliar administrativo</option>
-                    <option value="vendedor">Vendedor</option>
+                    <option value="" disabled {% if not datos.rol %}selected{% endif %}>Seleccionar rol</option>
+                    {% for g in grupos %}
+                    <option value="{{ g.pk }}" {% if datos.rol == g.pk|stringformat:"s" %}selected{% endif %}>{{ g.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
@@ -79,9 +75,100 @@
 
         <div class="acciones">
             <button type="submit" class="btn-crear">Crear cuenta</button>
-            <button type="reset" class="btn-cancelar">Cancelar</button>
+            <button type="reset" class="btn-cancelar" id="btnCancelar">Cancelar</button>
         </div>
     </form>
 
 </div>
+
+<script>
+(function () {
+    var form   = document.getElementById('formCuenta');
+    var buscar = document.getElementById('empleadoBuscar');
+    var oculto = document.getElementById('empleadoId');
+    var doc    = document.getElementById('documento');
+    var lista  = document.getElementById('comboLista');
+    var vacio  = document.getElementById('comboVacio');
+    var items  = Array.prototype.slice.call(lista.querySelectorAll('li[data-id]'));
+
+    function abrir()  { lista.hidden = false; }
+    function cerrar() { lista.hidden = true; }
+
+    function filtrar() {
+        var q = buscar.value.trim().toLowerCase();
+        var visibles = 0;
+        items.forEach(function (li) {
+            var ok = !q ||
+                li.dataset.id.toLowerCase().indexOf(q) !== -1 ||
+                li.dataset.nombre.toLowerCase().indexOf(q) !== -1;
+            li.hidden = !ok;
+            if (ok) { visibles++; }
+        });
+        vacio.hidden = visibles > 0;
+    }
+
+    function elegir(li) {
+        oculto.value = li.dataset.id;
+        buscar.value = li.dataset.nombre;
+        doc.value    = li.dataset.id;
+        buscar.setCustomValidity('');
+        cerrar();
+    }
+
+    function limpiar() {
+        oculto.value = '';
+        doc.value = '';
+    }
+
+    buscar.addEventListener('focus', function () { filtrar(); abrir(); });
+
+    buscar.addEventListener('input', function () {
+        limpiar();
+        buscar.setCustomValidity('');
+        filtrar();
+        abrir();
+    });
+
+    buscar.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var primero = items.find(function (li) { return !li.hidden; });
+            if (primero) { elegir(primero); }
+        } else if (e.key === 'Escape') {
+            cerrar();
+        }
+    });
+
+    // mousedown (no click) para que se elija antes de que el input pierda el foco
+    lista.addEventListener('mousedown', function (e) {
+        var li = e.target.closest('li[data-id]');
+        if (li) { e.preventDefault(); elegir(li); }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#comboEmpleado')) { cerrar(); }
+    });
+
+    // Si el formulario volvió con un error, restaura el empleado elegido
+    if (oculto.value) {
+        var previo = items.find(function (li) { return li.dataset.id === oculto.value; });
+        if (previo) { elegir(previo); }
+    }
+
+    // No deja enviar sin haber elegido un empleado de la lista
+    form.addEventListener('submit', function (e) {
+        if (!oculto.value) {
+            e.preventDefault();
+            buscar.setCustomValidity('Elige un empleado de la lista');
+            buscar.reportValidity();
+        }
+    });
+
+    document.getElementById('btnCancelar').addEventListener('click', function () {
+        limpiar();
+        buscar.value = '';
+        buscar.setCustomValidity('');
+    });
+})();
+</script>
 {% endblock %}

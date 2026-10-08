@@ -51,6 +51,10 @@
             <!-- Botón de tema: una sola vez, dentro del menú -->
             <button type="button" class="theme-btn" id="themeToggle"></button>
 
+            <a class="sidebar-link {% if request.resolver_match.url_name == 'cambiar_clave' %}active{% endif %}"
+               href="{% url 'cambiar_clave' %}">Cambiar contraseña</a>
+
+
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="logout-btn">Cerrar sesión</button>

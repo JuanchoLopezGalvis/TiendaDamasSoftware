@@ -1,12 +1,20 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from itertools import groupby
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.utils.crypto import get_random_string
 
+from Modulos.usuarios.models import Empleado, Usuario
 from django.contrib import messages
 from django.contrib.auth.models import Group, Permission
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.messages.views import SuccessMessageMixin
+from django.urls import reverse_lazy
 # Create your views here.
 ACCIONES = {
     'add': 'Agregar',
@@ -41,8 +49,71 @@ def _seccion(request, titulo, descripcion):
 
 @login_required
 def registro_usuario(request):
-    return render(request, 'signup.html')
+    empleados = Empleado.objects.filter(usuario__isnull=True).order_by('nombre_completo')
+    grupos = Group.objects.order_by('name')
+    datos = {}
 
+    if request.method == 'POST':
+        datos = request.POST
+        username = datos.get('username', '').strip()
+        correo = datos.get('correo', '').strip()
+        empleado = empleados.filter(pk=datos.get('empleado')).first()
+        rol_id = datos.get('rol', '')
+        grupo = grupos.filter(pk=rol_id).first() if rol_id.isdigit() else None
+
+        errores = []
+        if empleado is None:
+            errores.append('Selecciona un empleado de la lista.')
+        if not username:
+            errores.append('Escribe el nombre de usuario.')
+        elif Usuario.objects.filter(username__iexact=username).exists():
+            errores.append('Ese nombre de usuario ya está en uso.')
+        try:
+            validate_email(correo)
+        except ValidationError:
+            errores.append('Escribe un correo válido.')
+        if grupo is None:
+            errores.append('Selecciona un rol.')
+
+        if not errores:
+            clave = get_random_string(12)
+            usuario = Usuario.objects.create_user(
+                username=username,
+                email=correo,
+                password=clave,
+                empleado=empleado,
+            )
+            usuario.groups.add(grupo)
+
+            try:
+                send_mail(
+                    'Tu cuenta en TiendaDamas',
+                    f'Hola {empleado.nombre_completo},\n\n'
+                    f'Se creó tu cuenta.\n'
+                    f'Usuario: {username}\n'
+                    f'Contraseña temporal: {clave}\n\n'
+                    f'Cámbiala en tu primer ingreso.',
+                    None,
+                    [correo],
+                )
+                messages.success(
+                    request,
+                    f'Cuenta creada para {empleado.nombre_completo}. '
+                    f'La contraseña temporal se envió a {correo}.')
+            except Exception:
+                messages.warning(
+                    request,
+                    'La cuenta se creó, pero no se pudo enviar el correo.')
+            return redirect('registro_usuario')
+
+        for e in errores:
+            messages.error(request, e)
+
+    return render(request, 'signup.html', {
+        'empleados': empleados,
+        'grupos': grupos,
+        'datos': datos,
+    })
 
 @login_required
 def roles_permisos(request):
@@ -112,3 +183,8 @@ def asignacion_roles(request):
 @login_required
 def bitacora_auditoria(request):
     return render(request, 'bitacora.html')
+
+class CambiarClaveView(SuccessMessageMixin, PasswordChangeView):
+    template_name = 'cambiar_clave.html'
+    success_url = reverse_lazy('cambiar_clave')
+    success_message = 'Tu contraseña se actualizó correctamente.'

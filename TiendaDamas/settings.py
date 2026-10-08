@@ -124,12 +124,29 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
 
+# Correo
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # por defecto: imprime en la terminal
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 10
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'TiendaDamas <tiendadamas56@gmail.com>'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'panel'
+LOGOUT_REDIRECT_URL = 'login'
+
+# Configuración privada de cada equipo (no se sube a GitHub)
+try:
+    from .local_settings import *  # noqa
+except ImportError:
+    pass
+
+
+DEFAULT_FROM_EMAIL = 'tiendadamas56@gmail.com'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'panel'
 LOGOUT_REDIRECT_URL = 'login'

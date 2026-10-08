@@ -22,3 +22,66 @@
     display: none;
   }
 }
+/* ---------- Combo de empleados ---------- */
+.combo {
+  position: relative;
+}
+
+.combo-lista {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+.combo-lista[hidden],
+.combo-lista li[hidden] {
+  display: none;
+}
+
+.combo-lista li {
+  display: flex;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 4px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.combo-lista li:hover {
+  background-color: var(--soft);
+}
+
+.combo-id {
+  min-width: 90px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.combo-lista li.combo-vacio {
+  color: var(--muted);
+  cursor: default;
+}
+
+.combo-lista li.combo-vacio:hover {
+  background: none;
+}
+
+/* Campo de solo lectura (documento) */
+.campo input[readonly] {
+  background-color: var(--soft);
+  border-style: dashed;
+  color: var(--muted);
+  cursor: default;
+}
