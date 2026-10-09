@@ -1,4 +1,4 @@
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render
 from itertools import groupby
 from django.core.exceptions import ValidationError
@@ -58,7 +58,29 @@ def _seccion(request, titulo, descripcion):
         'titulo': titulo,
         'descripcion': descripcion,
     })
+@login_required
+@permission_required('usuarios.add_empleado', raise_exception=True)
+def crear_empleado(request):
+    url = reverse('crear_empleado')
+    valores = {'documento': '', 'nombre': ''}
 
+    if request.method == 'POST':
+        documento = request.POST.get('documento', '').strip()
+        nombre = request.POST.get('nombre', '').strip()
+        valores = {'documento': documento, 'nombre': nombre}
+
+        if not documento or not nombre:
+            messages.error(request, 'Completa el documento y el nombre.')
+        elif len(documento) > 50 or len(nombre) > 50:
+            messages.error(request, 'El documento y el nombre admiten máximo 50 caracteres.')
+        elif Empleado.objects.filter(pk=documento).exists():
+            messages.error(request, 'Ya existe un empleado con ese documento.')
+        else:
+            Empleado.objects.create(documento_identidad=documento, nombre_completo=nombre)
+            messages.success(request, f'Empleado "{nombre}" registrado.')
+            return redirect(url)
+
+    return render(request, 'empleados.html', {'valores': valores})
 
 @login_required
 def registro_usuario(request):

@@ -1,0 +1,45 @@
+{% extends 'base_panel.html' %}
+{% load static %}
+
+{% block title %}Registro de empleado{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilosSignup.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="registro-wrap">
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form class="registro-card" method="post">
+        {% csrf_token %}
+
+        <div class="registro-grid">
+
+            <div class="campo">
+                <label for="nombre">Nombre completo</label>
+                <input type="text" id="nombre" name="nombre" maxlength="50"
+                       value="{{ valores.nombre }}" required>
+            </div>
+
+            <div class="campo">
+                <label for="documento">Documento de identidad</label>
+                <input type="text" id="documento" name="documento" maxlength="50"
+                       value="{{ valores.documento }}" required>
+            </div>
+
+        </div>
+
+        <div class="acciones">
+            <button type="submit" class="btn-crear">Registrar empleado</button>
+            <button type="reset" class="btn-cancelar">Cancelar</button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

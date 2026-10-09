@@ -32,6 +32,9 @@
         <div class="sidebar-brand">TiendaDamas</div>
 
         <nav class="menu">
+            <a class="value {% if request.resolver_match.url_name == 'crear_empleado' %}active{% endif %}"
+               href="{% url 'crear_empleado' %}">crear empleado</a>
+
             <a class="value {% if request.resolver_match.url_name == 'registro_usuario' %}active{% endif %}"
                href="{% url 'registro_usuario' %}">Registro de usuario</a>
 

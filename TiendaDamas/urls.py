@@ -26,6 +26,7 @@ urlpatterns = [
 
 
 path('', usuario_views.panel, name='panel'),
+    path('panel/empleados/', usuario_views.crear_empleado, name='crear_empleado'),
     path('panel/registro-usuario/', usuario_views.registro_usuario, name='registro_usuario'),
     path('panel/roles-permisos/', usuario_views.roles_permisos, name='roles_permisos'),
     path('panel/asignacion-roles/', usuario_views.asignacion_roles, name='asignacion_roles'),
