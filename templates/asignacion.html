@@ -7,61 +7,71 @@
 
     <h1 class="pagina-titulo"></h1>
 
-
-
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
 
     <section class="card">
 
-        <div class="filtros">
+        <form method="get" class="filtros">
             <div class="campo">
                 <label for="buscar">Buscar usuario</label>
-                <input type="text" id="buscar" style="width: 307px;">
+                <input type="text" id="buscar" name="buscar" value="{{ buscar }}" style="width: 307px;">
             </div>
 
             <div class="campo">
                 <label for="estado">Estado</label>
-                <select id="estado" style="width: 195px;">
+                <select id="estado" name="estado" style="width: 195px;">
                     <option value="">Activo / Inactivo</option>
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
+                    <option value="activo" {% if estado == 'activo' %}selected{% endif %}>Activo</option>
+                    <option value="inactivo" {% if estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
                 </select>
             </div>
-        </div>
+
+            <button type="submit" class="btn-secundario">Filtrar</button>
+        </form>
 
         <table class="tabla">
             <thead>
                 <tr>
                     <th>Usuario</th>
-                    <th>Cargo - Rol</th>
+                    <th>Rol</th>
                     <th>Estado</th>
                     <th></th>
                 </tr>
             </thead>
-            <tbody id="filasUsuarios">
-                <tr data-nombre="Juan Miguel" data-estado="activo">
-                    <td>Juan Miguel</td>
-                    <td>Gerente</td>
-                    <td><span class="pill pill-ok">Activo</span></td>
-                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>
+                        {{ u.empleado.nombre_completo|default:"Sin empleado" }} -
+                        {% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% empty %}Sin rol{% endfor %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="pill pill-ok">Activo</span>
+                        {% else %}
+                            <span class="pill pill-off">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn-secundario btn-chico btn-gestionar"
+                                data-id="{{ u.pk }}"
+                                data-nombre="{{ u.username }}"
+                                data-activo="{% if u.is_active %}1{% else %}0{% endif %}"
+                                data-rol="{% for g in u.groups.all %}{% if forloop.first %}{{ g.pk }}{% endif %}{% endfor %}">
+                            Gestionar
+                        </button>
+                    </td>
                 </tr>
-                <tr data-nombre="Juan Diego" data-estado="activo">
-                    <td>Juan Diego</td>
-                    <td>Auxiliar Administrativo</td>
-                    <td><span class="pill pill-ok">Activo</span></td>
-                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No hay usuarios que coincidan con el filtro.</td>
                 </tr>
-                <tr data-nombre="Francisco" data-estado="inactivo">
-                    <td>Francisco</td>
-                    <td>Vendedor</td>
-                    <td><span class="pill pill-off">Inactivo</span></td>
-                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
-                </tr>
-                <tr data-nombre="Jhonatan" data-estado="inactivo">
-                    <td>Jhonatan</td>
-                    <td>Vendedor</td>
-                    <td><span class="pill pill-off">Inactivo</span></td>
-                    <td><button type="button" class="btn-secundario btn-chico">Gestionar</button></td>
-                </tr>
+                {% endfor %}
             </tbody>
         </table>
 
@@ -72,24 +82,59 @@
     </section>
 </div>
 
+<!-- ========== Ventana "Gestionar" ========== -->
+<dialog id="dlgGestionar" style="border:1px solid #d9dde3; border-radius:12px; padding:20px; min-width:320px;">
+    <h2 class="card-titulo" id="dlgTitulo">Gestionar usuario</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="asignar">
+        <input type="hidden" name="usuario" id="dlgUsuarioRol">
+
+        <div class="campo">
+            <label for="dlgRol">Rol</label>
+            <select id="dlgRol" name="rol">
+                <option value="">Sin rol</option>
+                {% for g in grupos %}
+                    <option value="{{ g.pk }}">{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="acciones" style="margin-top:12px;">
+            <button type="submit" class="btn-crear">Guardar rol</button>
+        </div>
+    </form>
+
+    <hr style="margin:16px 0;">
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="estado">
+        <input type="hidden" name="usuario" id="dlgUsuarioEstado">
+        <button type="submit" class="btn-secundario" id="dlgBtnEstado"></button>
+    </form>
+
+    <div class="acciones" style="margin-top:16px;">
+        <button type="button" class="btn-cancelar" id="dlgCerrar">Cerrar</button>
+    </div>
+</dialog>
+
 <script>
-    // Filtro en vivo (datos de ejemplo)
-    var inputBuscar = document.getElementById('buscar');
-    var selectEstado = document.getElementById('estado');
-    var filas = document.querySelectorAll('#filasUsuarios tr');
+    var dlg = document.getElementById('dlgGestionar');
 
-    function filtrar() {
-        var q = inputBuscar.value.toLowerCase();
-        var est = selectEstado.value;
-
-        filas.forEach(function (tr) {
-            var okTexto = tr.dataset.nombre.toLowerCase().indexOf(q) !== -1;
-            var okEstado = !est || tr.dataset.estado === est;
-            tr.style.display = (okTexto && okEstado) ? '' : 'none';
+    document.querySelectorAll('.btn-gestionar').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('dlgTitulo').textContent = 'Gestionar: ' + btn.dataset.nombre;
+            document.getElementById('dlgUsuarioRol').value = btn.dataset.id;
+            document.getElementById('dlgUsuarioEstado').value = btn.dataset.id;
+            document.getElementById('dlgRol').value = btn.dataset.rol;
+            document.getElementById('dlgBtnEstado').textContent =
+                btn.dataset.activo === '1' ? 'Desactivar cuenta' : 'Activar cuenta';
+            dlg.showModal();
         });
-    }
+    });
 
-    inputBuscar.addEventListener('input', filtrar);
-    selectEstado.addEventListener('change', filtrar);
+    document.getElementById('dlgCerrar').addEventListener('click', function () { dlg.close(); });
 </script>
 {% endblock %}

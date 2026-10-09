@@ -9,7 +9,7 @@ from django.utils.crypto import get_random_string
 from Modulos.usuarios.models import Empleado, Usuario
 from django.contrib import messages
 from django.contrib.auth.models import Group, Permission
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth.views import PasswordChangeView
@@ -211,8 +211,74 @@ def roles_permisos(request):
         'bloques': bloques,
     })
 @login_required
+@permission_required('usuarios.change_usuario', raise_exception=True)
 def asignacion_roles(request):
-    return render(request, 'asignacion.html')
+    url = reverse('asignacion_roles')
+
+    # ---------- Acciones (POST) ----------
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        uid = request.POST.get('usuario', '')
+
+        if not uid.isdigit():
+            messages.error(request, 'Usuario no válido.')
+            return redirect(url)
+
+        usuario = get_object_or_404(Usuario, pk=uid)
+        nombre = usuario.get_username()
+
+        if accion == 'asignar':
+            rol_id = request.POST.get('rol', '')
+            if rol_id == '':
+                usuario.groups.clear()
+                messages.success(request, f'Se quitó el rol a "{nombre}".')
+            elif rol_id.isdigit():
+                grupo = get_object_or_404(Group, pk=rol_id)
+                usuario.groups.set([grupo])
+                messages.success(request, f'"{nombre}" ahora tiene el rol "{grupo.name}".')
+            else:
+                messages.error(request, 'Rol no válido.')
+
+        elif accion == 'estado':
+            if usuario.pk == request.user.pk:
+                messages.error(request, 'No puedes desactivar tu propia cuenta.')
+            else:
+                usuario.is_active = not usuario.is_active
+                usuario.save(update_fields=['is_active'])
+                estado = 'activada' if usuario.is_active else 'desactivada'
+                messages.success(request, f'Cuenta de "{nombre}" {estado}.')
+
+        return redirect(url)
+
+    # ---------- Mostrar (GET) ----------
+    buscar = request.GET.get('buscar', '').strip()
+    estado = request.GET.get('estado', '')
+
+    usuarios = (
+        Usuario.objects
+        .select_related('empleado')
+        .prefetch_related('groups')
+        .order_by('username')
+    )
+
+    if buscar:
+        usuarios = usuarios.filter(
+            Q(username__icontains=buscar)
+            | Q(first_name__icontains=buscar)
+            | Q(last_name__icontains=buscar)
+            | Q(empleado__nombre_completo__icontains=buscar)
+        )
+    if estado == 'activo':
+        usuarios = usuarios.filter(is_active=True)
+    elif estado == 'inactivo':
+        usuarios = usuarios.filter(is_active=False)
+
+    return render(request, 'asignacion.html', {
+        'usuarios': usuarios,
+        'grupos': Group.objects.order_by('name'),
+        'buscar': buscar,
+        'estado': estado,
+    })
 
 
 @login_required
