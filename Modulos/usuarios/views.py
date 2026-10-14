@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
+from django.core.exceptions import PermissionDenied
 # Create your views here.
 ACCIONES = {
     'add': 'Agregar',
@@ -37,7 +38,7 @@ def nombre_permiso(p):
 
 @login_required
 def panel(request):
-    return render(request, 'panel.html')
+    return render(request, 'perfil.html')
 
 @login_required
 def perfil(request):
@@ -83,6 +84,7 @@ def crear_empleado(request):
     return render(request, 'empleados.html', {'valores': valores})
 
 @login_required
+@permission_required('usuarios.add_usuario', raise_exception=True)
 def registro_usuario(request):
     empleados = Empleado.objects.filter(usuario__isnull=True).order_by('nombre_completo')
     grupos = Group.objects.order_by('name')
@@ -159,6 +161,8 @@ def roles_permisos(request):
         accion = request.POST.get('accion')
 
         if accion == 'nuevo':
+            if not request.user.has_perm('auth.add_group'):
+                raise PermissionDenied
             nombre = request.POST.get('nombre', '').strip()
             if not nombre:
                 messages.error(request, 'Escribe un nombre para el nuevo rol.')
@@ -171,6 +175,8 @@ def roles_permisos(request):
             return redirect(url)
 
         if accion == 'guardar':
+            if not request.user.has_perm('auth.change_group'):
+                raise PermissionDenied
             grupo = get_object_or_404(Group, pk=request.POST.get('rol'))
             ids = request.POST.getlist('permisos')
             grupo.permissions.set(Permission.objects.filter(pk__in=ids))

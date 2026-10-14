@@ -32,17 +32,25 @@
         <div class="sidebar-brand">TiendaDamas</div>
 
         <nav class="menu">
+            {% if perms.usuarios.add_empleado %}
             <a class="value {% if request.resolver_match.url_name == 'crear_empleado' %}active{% endif %}"
-               href="{% url 'crear_empleado' %}">crear empleado</a>
+               href="{% url 'crear_empleado' %}">Crear empleado</a>
+            {% endif %}
 
+            {% if perms.usuarios.add_usuario %}
             <a class="value {% if request.resolver_match.url_name == 'registro_usuario' %}active{% endif %}"
                href="{% url 'registro_usuario' %}">Registro de usuario</a>
+            {% endif %}
 
+            {% if perms.auth.view_group %}
             <a class="value {% if request.resolver_match.url_name == 'roles_permisos' %}active{% endif %}"
                href="{% url 'roles_permisos' %}">Gestión de roles y permisos</a>
+            {% endif %}
 
+            {% if perms.usuarios.change_usuario %}
             <a class="value {% if request.resolver_match.url_name == 'asignacion_roles' %}active{% endif %}"
                href="{% url 'asignacion_roles' %}">Asignación de roles</a>
+            {% endif %}
 
             <a class="value {% if request.resolver_match.url_name == 'bitacora_auditoria' %}active{% endif %}"
                href="{% url 'bitacora_auditoria' %}">Bitácora de auditoría</a>
