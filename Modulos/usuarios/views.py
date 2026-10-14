@@ -400,3 +400,42 @@ class CambiarClaveView(SuccessMessageMixin, PasswordChangeView):
     template_name = 'cambiar_clave.html'
     success_url = reverse_lazy('cambiar_clave')
     success_message = 'Tu contraseña se actualizó correctamente.'
+
+
+def recuperar_clave(request):
+    username = ''
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        documento = request.POST.get('documento', '').strip()
+
+        usuario = Usuario.objects.filter(
+            username__iexact=username,
+            empleado__documento_identidad=documento,
+            is_active=True,
+        ).first()
+
+        if usuario and usuario.email:
+            clave = get_random_string(12)
+            usuario.set_password(clave)
+            usuario.save(update_fields=['password'])
+            try:
+                send_mail(
+                    'Recuperación de contraseña - TiendaDamas',
+                    f'Hola {usuario.empleado.nombre_completo},\n\n'
+                    f'Tu contraseña temporal es: {clave}\n\n'
+                    f'Cámbiala en tu próximo ingreso.',
+                    None,
+                    [usuario.email],
+                )
+            except Exception:
+                pass
+
+        # Mismo mensaje exista o no el usuario, para no revelar qué cuentas existen
+        messages.success(
+            request,
+            'Si los datos son correctos, enviamos una contraseña temporal al correo registrado.'
+        )
+        return redirect('login')
+
+    return render(request, 'recuperar_clave.html', {'username': username})

@@ -34,4 +34,5 @@ path('', usuario_views.panel, name='panel'),
     path('panel/cambiar-clave/', usuario_views.CambiarClaveView.as_view(), name='cambiar_clave'),
     path('panel/perfil/', usuario_views.perfil, name='perfil'),
     path('panel/consulta/', usuario_views.consulta, name='consulta'),
+    path('recuperar-clave/', usuario_views.recuperar_clave, name='recuperar_clave'),
 ]
