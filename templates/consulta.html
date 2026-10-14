@@ -1,0 +1,78 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Consulta{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <section class="card">
+
+        <div style="display: flex; gap: .5rem; margin-bottom: 1rem;">
+            {% if puede_empleados %}
+                <a class="btn-secundario" href="?tipo=empleados"
+                   style="text-decoration: none; {% if tipo == 'empleados' %}font-weight: 700; border-color: var(--primary);{% endif %}">
+                    Empleados
+                </a>
+            {% endif %}
+            {% if puede_usuarios %}
+                <a class="btn-secundario" href="?tipo=usuarios"
+                   style="text-decoration: none; {% if tipo == 'usuarios' %}font-weight: 700; border-color: var(--primary);{% endif %}">
+                    Usuarios
+                </a>
+            {% endif %}
+        </div>
+
+        <form method="get" class="filtros">
+            <input type="hidden" name="tipo" value="{{ tipo }}">
+            <div class="campo">
+                <label for="buscar">Buscar</label>
+                <input type="text" id="buscar" name="buscar" value="{{ buscar }}"
+                       placeholder="{% if tipo == 'empleados' %}Nombre o documento{% else %}Usuario, correo o nombre{% endif %}">
+            </div>
+            <button type="submit" class="btn-secundario">Buscar</button>
+        </form>
+
+        <p style="color: var(--muted);">
+            {{ resultados|length }} resultado{{ resultados|length|pluralize }}
+        </p>
+
+        {% if tipo == 'empleados' %}
+        <table class="tabla sin-derecha" style="margin-bottom: 0;">
+            <thead>
+                <tr><th>Documento</th><th>Nombre completo</th></tr>
+            </thead>
+            <tbody>
+                {% for e in resultados %}
+                <tr>
+                    <td>{{ e.documento_identidad }}</td>
+                    <td>{{ e.nombre_completo }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2">No se encontraron empleados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <table class="tabla sin-derecha" style="margin-bottom: 0;">
+            <thead>
+                <tr><th>Usuario</th><th>Empleado</th><th>Correo</th><th>Rol</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+                {% for u in resultados %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.empleado.nombre_completo }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{% for g in u.groups.all %}{{ g.name }}{% empty %}Sin rol{% endfor %}</td>
+                    <td>{% if u.is_active %}Activo{% else %}Inactivo{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">No se encontraron usuarios.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+    </section>
+</div>
+{% endblock %}

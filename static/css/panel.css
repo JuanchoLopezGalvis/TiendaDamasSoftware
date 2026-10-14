@@ -39,6 +39,88 @@
 
   color-scheme: light;
 }
+/* ---------- Ventana de confirmación ---------- */
+.modal {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background-color: var(--card);
+  color: var(--text);
+  padding: 32px 28px 26px;
+  width: calc(100% - 40px);
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.modal[open] {
+  animation: modal-entra .18s ease-out;
+}
+
+.modal::backdrop {
+  background: rgba(1, 4, 9, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+@keyframes modal-entra {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.modal-icono {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background-color: #fde3e3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+:root[data-theme="dark"] .modal-icono {
+  background-color: #3b1517;
+}
+
+.modal h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: var(--title);
+}
+
+.modal p {
+  margin: 0 0 24px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.modal strong {
+  color: var(--text);
+}
+
+.modal-acciones {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-acciones button {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 15px;
+  border-radius: 6px;
+}
+
+.btn-peligro {
+  background-color: #b62324;
+  border: 1px solid #b62324;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-peligro:hover {
+  background-color: #9a1d1e;
+}
 
 :root[data-theme="dark"] {
   --bg: #010409;
@@ -884,3 +966,4 @@ body.menu-cerrado .sidebar {
     text-align: center;
   }
 }
+

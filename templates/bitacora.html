@@ -5,35 +5,41 @@
 {% block content %}
 <div class="pagina">
 
-    <h1 class="pagina-titulo"></h1>
-
-
+    <h1 class="pagina-titulo">Bitácora de auditoría</h1>
+    <p class="pagina-sub">Historial de acciones realizadas en el sistema</p>
 
     <section class="card">
 
-        <div class="filtros">
+        <form method="get" class="filtros">
             <div class="campo">
                 <label for="desde">Fecha desde</label>
-                <input type="date" id="desde">
+                <input type="date" id="desde" name="desde" value="{{ desde }}">
             </div>
 
             <div class="campo">
                 <label for="hasta">Fecha hasta</label>
-                <input type="date" id="hasta">
+                <input type="date" id="hasta" name="hasta" value="{{ hasta }}">
             </div>
 
             <div class="campo">
                 <label for="tipo">Tipo de evento</label>
-                <select id="tipo" style="width: 196px;">
+                <select id="tipo" name="tipo" style="width: 196px;">
                     <option value="">Todos</option>
-                    <option value="cambio_rol">Cambio de rol</option>
-                    <option value="inicio_sesion">Inicio de sesión</option>
-                    <option value="acceso_denegado">Acceso denegado</option>
+                    {% for valor, nombre in eventos %}
+                        <option value="{{ valor }}" {% if tipo == valor %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
-            <button type="button" class="btn-secundario" id="btnFiltrar">Filtrar</button>
-        </div>
+            <button type="submit" class="btn-secundario">Filtrar</button>
+            <a class="btn-secundario" href="{% url 'bitacora_auditoria' %}"
+               style="text-decoration: none; display: inline-flex; align-items: center;">Limpiar</a>
+        </form>
+
+        <p style="color: var(--muted);">
+            {{ total }} registro{{ total|pluralize }}
+            {% if total > 200 %}(se muestran los 200 más recientes){% endif %}
+        </p>
 
         <table class="tabla sin-derecha" style="margin-bottom: 0;">
             <thead>
@@ -42,50 +48,24 @@
                     <th>Usuario</th>
                     <th>Evento</th>
                     <th>Detalle</th>
+                    <th>IP</th>
                 </tr>
             </thead>
-            <tbody id="filasBitacora">
-                <tr data-fecha="2026-09-23" data-tipo="cambio_rol">
-                    <td>23/09/2026 09:14</td>
-                    <td>Luis Vivas</td>
-                    <td>Cambio de rol</td>
-                    <td>Ana Torres lo puso Inactivo</td>
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td>{{ r.fecha|date:"d/m/Y H:i" }}</td>
+                    <td>{{ r.usuario_texto|default:"Desconocido" }}</td>
+                    <td>{{ r.get_evento_display }}</td>
+                    <td>{{ r.detalle }}</td>
+                    <td>{{ r.ip|default:"-" }}</td>
                 </tr>
-                <tr data-fecha="2026-09-23" data-tipo="inicio_sesion">
-                    <td>23/09/2026 08:50</td>
-                    <td>Carlos Ruiz</td>
-                    <td>Inicio de sesión</td>
-                    <td>Exitoso</td>
-                </tr>
-                <tr data-fecha="2026-09-22" data-tipo="acceso_denegado">
-                    <td>22/09/2026 19:02</td>
-                    <td>Desconocido</td>
-                    <td>Acceso denegado</td>
-                    <td>5 intentos fallidos, cuenta bloqueada</td>
-                </tr>
+                {% empty %}
+                <tr><td colspan="5">No hay registros con esos filtros.</td></tr>
+                {% endfor %}
             </tbody>
         </table>
 
     </section>
 </div>
-
-<script>
-    // Filtro (datos de ejemplo): luego lo reemplazas con una consulta a la base de datos
-    document.getElementById('btnFiltrar').addEventListener('click', function () {
-        var desde = document.getElementById('desde').value;
-        var hasta = document.getElementById('hasta').value;
-        var tipo = document.getElementById('tipo').value;
-
-        document.querySelectorAll('#filasBitacora tr').forEach(function (tr) {
-            var f = tr.dataset.fecha;
-            var ok = true;
-
-            if (desde && f < desde) ok = false;
-            if (hasta && f > hasta) ok = false;
-            if (tipo && tr.dataset.tipo !== tipo) ok = false;
-
-            tr.style.display = ok ? '' : 'none';
-        });
-    });
-</script>
 {% endblock %}

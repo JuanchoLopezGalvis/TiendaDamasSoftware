@@ -5,6 +5,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/estilosRoles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/modal.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
@@ -106,8 +107,33 @@
                 <p class="nota">Los cambios se aplican de inmediato a todos los usuarios con este rol.</p>
 
                 <button type="submit" class="btn-primario">Guardar cambios</button>
-                <button type="submit" class="btn-primario">Eliminar Rol</button>
+                <button type="button" id="btnEliminar" class="btn-secundario">Eliminar rol</button>
             </form>
+            <dialog id="dlgEliminar" class="modal">
+                <div class="modal-icono">🗑️</div>
+                <h2>¿Eliminar este rol?</h2>
+                <p>
+                    Se eliminará el rol <strong>{{ seleccionado.name }}</strong>.<br>
+                    Esta acción no se puede deshacer.
+                </p>
+                <div class="modal-acciones">
+                    <button type="button" id="btnCancelarEliminar" class="btn-secundario">Cancelar</button>
+                    <button type="submit" form="formPermisos" name="eliminar" value="1" class="btn-peligro">Sí, eliminar</button>
+                </div>
+            </dialog>
+
+            <script>
+                var dlg = document.getElementById('dlgEliminar');
+                document.getElementById('btnEliminar').addEventListener('click', function () {
+                    dlg.showModal();
+                });
+                document.getElementById('btnCancelarEliminar').addEventListener('click', function () {
+                    dlg.close();
+                });
+                dlg.addEventListener('click', function (e) {
+                    if (e.target === dlg) dlg.close();
+                });
+            </script>
             {% else %}
                 <p class="nota">Crea un rol para poder asignarle permisos.</p>
             {% endif %}

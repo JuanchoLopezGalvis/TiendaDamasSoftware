@@ -52,8 +52,16 @@
                href="{% url 'asignacion_roles' %}">Asignación de roles</a>
             {% endif %}
 
+            {% if perms.usuarios.view_empleado or perms.usuarios.view_usuario %}
+            <a class="value {% if request.resolver_match.url_name == 'consulta' %}active{% endif %}"
+               href="{% url 'consulta' %}">Buscar Usuario-Empleado</a>
+            {% endif %}
+
+            {% if perms.usuarios.view_auditoria %}
             <a class="value {% if request.resolver_match.url_name == 'bitacora_auditoria' %}active{% endif %}"
                href="{% url 'bitacora_auditoria' %}">Bitácora de auditoría</a>
+            {% endif %}
+
         </nav>
 
         <div class="sidebar-user">

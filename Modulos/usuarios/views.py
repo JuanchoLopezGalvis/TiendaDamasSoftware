@@ -6,7 +6,8 @@ from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.utils.crypto import get_random_string
 
-from Modulos.usuarios.models import Empleado, Usuario
+from Modulos.usuarios.models import Empleado, Usuario, Auditoria
+from Modulos.usuarios.auditoria import registrar
 from django.contrib import messages
 from django.contrib.auth.models import Group, Permission
 from django.db.models import Count, Q
@@ -16,6 +17,7 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
 from django.core.exceptions import PermissionDenied
+from django.utils.dateparse import parse_date
 # Create your views here.
 ACCIONES = {
     'add': 'Agregar',
@@ -38,7 +40,17 @@ def nombre_permiso(p):
 
 @login_required
 def panel(request):
-    return render(request, 'perfil.html')
+    usuario = request.user
+    roles = usuario.groups.order_by('name')
+    permisos = sorted(
+        {nombre_permiso(p) for p in Permission.objects.filter(
+            group__user=usuario
+        ).select_related('content_type')}
+    )
+    return render(request, 'perfil.html', {
+        'roles': roles,
+        'permisos': permisos,
+    })
 
 @login_required
 def perfil(request):
@@ -78,6 +90,7 @@ def crear_empleado(request):
             messages.error(request, 'Ya existe un empleado con ese documento.')
         else:
             Empleado.objects.create(documento_identidad=documento, nombre_completo=nombre)
+            registrar(request, Auditoria.Evento.CREACION, f'Empleado {nombre} ({documento})')
             messages.success(request, f'Empleado "{nombre}" registrado.')
             return redirect(url)
 
@@ -121,6 +134,7 @@ def registro_usuario(request):
                 empleado=empleado,
             )
             usuario.groups.add(grupo)
+            registrar(request, Auditoria.Evento.CREACION, f'Usuario {username} con rol {grupo.name}')
 
             try:
                 send_mail(
@@ -153,11 +167,71 @@ def registro_usuario(request):
     })
 
 @login_required
+def consulta(request):
+    puede_empleados = request.user.has_perm('usuarios.view_empleado')
+    puede_usuarios = request.user.has_perm('usuarios.view_usuario')
+    if not (puede_empleados or puede_usuarios):
+        raise PermissionDenied
+
+    tipo = request.GET.get('tipo', 'empleados')
+    if tipo == 'usuarios' and not puede_usuarios:
+        tipo = 'empleados'
+    if tipo == 'empleados' and not puede_empleados:
+        tipo = 'usuarios'
+
+    buscar = request.GET.get('buscar', '').strip()
+
+    if tipo == 'empleados':
+        resultados = Empleado.objects.order_by('nombre_completo')
+        if buscar:
+            resultados = resultados.filter(
+                Q(nombre_completo__icontains=buscar)
+                | Q(documento_identidad__icontains=buscar)
+            )
+    else:
+        resultados = (
+            Usuario.objects
+            .select_related('empleado')
+            .prefetch_related('groups')
+            .order_by('username')
+        )
+        if buscar:
+            resultados = resultados.filter(
+                Q(username__icontains=buscar)
+                | Q(email__icontains=buscar)
+                | Q(empleado__nombre_completo__icontains=buscar)
+            )
+
+    return render(request, 'consulta.html', {
+        'tipo': tipo,
+        'buscar': buscar,
+        'resultados': resultados,
+        'puede_empleados': puede_empleados,
+        'puede_usuarios': puede_usuarios,
+    })
+
+@login_required
 def roles_permisos(request):
     url = reverse('roles_permisos')
 
     # ---------- Acciones (POST) ----------
     if request.method == 'POST':
+        if 'eliminar' in request.POST:
+            if not request.user.has_perm('auth.delete_group'):
+                raise PermissionDenied
+            grupo = get_object_or_404(Group, pk=request.POST.get('rol'))
+            asignados = grupo.user_set.count()
+            if asignados:
+                messages.error(
+                    request,
+                    f'No se puede eliminar "{grupo.name}": tiene {asignados} '
+                    f'usuario(s) asignado(s). Cámbiales el rol primero.')
+                return redirect(f'{url}?rol={grupo.pk}')
+            nombre = grupo.name
+            grupo.delete()
+            registrar(request, Auditoria.Evento.CAMBIO_ROL, f'Rol {nombre} eliminado')
+            messages.success(request, f'Rol "{nombre}" eliminado.')
+            return redirect(url)
         accion = request.POST.get('accion')
 
         if accion == 'nuevo':
@@ -170,6 +244,7 @@ def roles_permisos(request):
                 messages.error(request, 'Ya existe un rol con ese nombre.')
             else:
                 grupo = Group.objects.create(name=nombre)
+                registrar(request, Auditoria.Evento.CREACION, f'Rol {grupo.name}')
                 messages.success(request, f'Rol "{grupo.name}" creado.')
                 return redirect(f'{url}?rol={grupo.pk}')
             return redirect(url)
@@ -180,6 +255,7 @@ def roles_permisos(request):
             grupo = get_object_or_404(Group, pk=request.POST.get('rol'))
             ids = request.POST.getlist('permisos')
             grupo.permissions.set(Permission.objects.filter(pk__in=ids))
+            registrar(request, Auditoria.Evento.CAMBIO_ROL, f'Permisos del rol {grupo.name} actualizados')
             messages.success(request, f'Permisos del rol "{grupo.name}" actualizados.')
             return redirect(f'{url}?rol={grupo.pk}')
 
@@ -237,10 +313,12 @@ def asignacion_roles(request):
             rol_id = request.POST.get('rol', '')
             if rol_id == '':
                 usuario.groups.clear()
+                registrar(request, Auditoria.Evento.CAMBIO_ROL, f'Se quitó el rol a {nombre}')
                 messages.success(request, f'Se quitó el rol a "{nombre}".')
             elif rol_id.isdigit():
                 grupo = get_object_or_404(Group, pk=rol_id)
                 usuario.groups.set([grupo])
+                registrar(request, Auditoria.Evento.CAMBIO_ROL, f'{nombre} ahora tiene el rol {grupo.name}')
                 messages.success(request, f'"{nombre}" ahora tiene el rol "{grupo.name}".')
             else:
                 messages.error(request, 'Rol no válido.')
@@ -287,9 +365,36 @@ def asignacion_roles(request):
     })
 
 
+def _fecha(texto):
+    try:
+        return parse_date(texto) if texto else None
+    except ValueError:
+        return None
+
+
 @login_required
+@permission_required('usuarios.view_auditoria', raise_exception=True)
 def bitacora_auditoria(request):
-    return render(request, 'bitacora.html')
+    desde = request.GET.get('desde', '')
+    hasta = request.GET.get('hasta', '')
+    tipo = request.GET.get('tipo', '')
+
+    registros = Auditoria.objects.select_related('usuario')
+    if _fecha(desde):
+        registros = registros.filter(fecha__date__gte=_fecha(desde))
+    if _fecha(hasta):
+        registros = registros.filter(fecha__date__lte=_fecha(hasta))
+    if tipo in Auditoria.Evento.values:
+        registros = registros.filter(evento=tipo)
+
+    return render(request, 'bitacora.html', {
+        'registros': registros[:200],
+        'total': registros.count(),
+        'eventos': Auditoria.Evento.choices,
+        'desde': desde,
+        'hasta': hasta,
+        'tipo': tipo,
+    })
 
 class CambiarClaveView(SuccessMessageMixin, PasswordChangeView):
     template_name = 'cambiar_clave.html'
