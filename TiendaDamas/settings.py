@@ -146,6 +146,10 @@ except ImportError:
     pass
 
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_COOKIE_AGE = 15 * 60          # 15 minutos de inactividad
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 DEFAULT_FROM_EMAIL = 'tiendadamas56@gmail.com'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'panel'
