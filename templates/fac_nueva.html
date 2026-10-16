@@ -1,0 +1,100 @@
+{% extends 'base_panel.html' %}
+{% load static %}
+
+{% block title %}Nueva factura{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Nueva factura</h1>
+    <p class="pagina-sub">Registra una venta agregando los productos por su código</p>
+
+    <form method="post" id="formFactura" class="card">
+        {% csrf_token %}
+
+        <div class="fila-campos">
+            <div class="campo campo-grande">
+                <label for="cliente">Cliente</label>
+                <input type="text" id="cliente" name="cliente" list="listaClientes"
+                       placeholder="Buscar cliente…" autocomplete="off" required>
+                <datalist id="listaClientes">
+                    {% for c in clientes %}<option value="{{ c }}">{% endfor %}
+                </datalist>
+            </div>
+            <div class="campo">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha" name="fecha" value="{{ hoy }}" required>
+            </div>
+        </div>
+
+        <h2 class="card-titulo">Productos</h2>
+        <div class="buscar-producto">
+            <div class="campo combo" id="comboProducto">
+                <label for="productoBuscar">Producto</label>
+                <input type="text" id="productoBuscar" class="buscador"
+                       placeholder="Buscar por código o nombre…" autocomplete="off">
+
+                <ul class="combo-lista" id="comboLista" hidden>
+                    {% for p in productos %}
+                    <li data-id="{{ p.id }}" data-codigo="{{ p.codigo }}"
+                        data-nombre="{{ p.nombre }}" data-precio="{{ p.precio }}">
+                        <span class="combo-id">{{ p.codigo }}</span>
+                        <span>{{ p.nombre }}</span>
+                        <span class="combo-precio"></span>
+                    </li>
+                    {% endfor %}
+                    <li class="combo-vacio" id="comboVacio" hidden>Sin resultados</li>
+                </ul>
+            </div>
+            <button type="button" id="btnAgregarProducto" class="btn-secundario">+ Agregar producto</button>
+        </div>
+        <div class="error-campo" id="errorCodigo" hidden></div>
+
+        <table class="tabla sin-derecha" id="tablaProductos">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="filaVacia">
+                    <td colspan="6">Aún no hay productos. Escribe un código y pulsa «Agregar producto».</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="aviso" id="resumen">
+            Total factura: <strong id="totalFactura">$0</strong>
+        </div>
+
+        <div class="acciones">
+            <button type="submit" id="btnGenerar" class="btn-primario" disabled>Generar factura</button>
+            <a class="btn-secundario btn-enlace" href="{% url 'consulta_facturas' %}">Cancelar</a>
+        </div>
+    </form>
+
+    <template id="tplProducto">
+        <tr>
+            <td class="celda-codigo"></td>
+            <td class="celda-nombre"></td>
+            <td>
+                <input type="hidden" name="producto">
+                <input type="number" class="input-tabla corto" name="cantidad" min="1" value="1" required>
+            </td>
+            <td class="celda-precio"></td>
+            <td class="celda-subtotal">$0</td>
+            <td><button type="button" class="btn-quitar" aria-label="Quitar producto">✕</button></td>
+        </tr>
+    </template>
+
+  
+
+</div>
+
+<script src="{% static 'js/factura_nueva.js' %}"></script>
+{% endblock %}

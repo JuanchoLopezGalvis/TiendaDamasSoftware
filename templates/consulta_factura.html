@@ -1,0 +1,65 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Consulta de facturas{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Consulta de facturas</h1>
+    <p class="pagina-sub">Estado y consulta de facturas</p>
+
+    <section class="card">
+
+        <form method="get" class="filtros">
+            <div class="campo">
+                <label for="numero">N.º de factura</label>
+                <input type="text" id="numero" name="numero">
+            </div>
+            <div class="campo">
+                <label for="cliente">Cliente</label>
+                <input type="text" id="cliente" name="cliente">
+            </div>
+            <div class="campo">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha" name="fecha">
+            </div>
+            <div class="campo">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" style="width: 160px;">
+                    <option value="">Todos</option>
+                    {% for e in estados %}
+                        <option value="{{ e }}">{{ e }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-secundario">Buscar</button>
+        </form>
+
+        <table class="tabla sin-derecha" style="margin-bottom: 0;">
+            <thead>
+                <tr>
+                    <th>N.º</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in facturas %}
+                <tr>
+                    <td>{{ f.numero }}</td>
+                    <td>{{ f.cliente }}</td>
+                    <td>{{ f.fecha }}</td>
+                    <td>{{ f.total }}</td>
+                    <td><span class="pill {{ f.clase }}">{{ f.estado }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">No hay facturas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </section>
+</div>
+{% endblock %}

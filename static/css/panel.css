@@ -967,3 +967,176 @@ body.menu-cerrado .sidebar {
   }
 }
 
+.pill-warn {
+  background-color: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.pill-error {
+  background-color: #fde3e3;
+  color: #8a1c1c;
+}
+
+:root[data-theme="dark"] .pill-error {
+  background-color: #3b1517;
+  color: #ff9b9b;
+}
+
+.menu-grupo {
+  color: #7D8590;
+}
+
+/* ---------- Nueva factura ---------- */
+.fila-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.campo-grande {
+  flex: 1;
+  min-width: 260px;
+}
+
+.input-tabla {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+select.input-tabla {
+  border-style: dashed;
+  background-color: var(--soft);
+  min-width: 230px;
+}
+
+.input-tabla.corto {
+  width: 90px;
+}
+
+.input-tabla:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 74, 140, 0.25);
+}
+
+.buscar-producto {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.buscar-producto .btn-secundario {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.error-campo {
+  margin-bottom: 14px;
+}
+
+.btn-quitar {
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.btn-quitar:hover {
+  background-color: #b62324;
+  border-color: #b62324;
+  color: #fff;
+}
+
+#resumen {
+  margin: 22px 0 0;
+  font-size: 15px;
+}
+
+
+.acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.btn-primario:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ---------- Combo con búsqueda ---------- */
+.combo {
+  position: relative;
+}
+
+.combo-lista {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+.combo-lista[hidden],
+.combo-lista li[hidden] {
+  display: none;
+}
+
+.combo-lista li {
+  display: flex;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 4px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.combo-lista li:hover {
+  background-color: var(--soft);
+}
+
+.combo-id {
+  min-width: 90px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.combo-precio {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.combo-lista li.combo-vacio {
+  color: var(--muted);
+  cursor: default;
+}
+
+.combo-lista li.combo-vacio:hover {
+  background: none;
+}
+
+.buscar-producto .combo {
+  flex: 1;
+  max-width: 520px;
+}

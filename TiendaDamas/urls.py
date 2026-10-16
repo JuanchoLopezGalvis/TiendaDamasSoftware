@@ -19,13 +19,12 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from Modulos.usuarios import views as usuario_views
+from Modulos.facturacion import views as facturacion_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-
-
-path('', usuario_views.panel, name='panel'),
+    path('', usuario_views.panel, name='panel'),
     path('panel/empleados/', usuario_views.crear_empleado, name='crear_empleado'),
     path('panel/registro-usuario/', usuario_views.registro_usuario, name='registro_usuario'),
     path('panel/roles-permisos/', usuario_views.roles_permisos, name='roles_permisos'),
@@ -35,4 +34,6 @@ path('', usuario_views.panel, name='panel'),
     path('panel/perfil/', usuario_views.perfil, name='perfil'),
     path('panel/consulta/', usuario_views.consulta, name='consulta'),
     path('recuperar-clave/', usuario_views.recuperar_clave, name='recuperar_clave'),
+    path('panel/facturacion/consulta/', facturacion_views.consulta_facturas, name='consulta_facturas'),
+    path('panel/facturacion/nueva/', facturacion_views.nueva_factura, name='nueva_factura'),
 ]
