@@ -36,4 +36,8 @@ urlpatterns = [
     path('recuperar-clave/', usuario_views.recuperar_clave, name='recuperar_clave'),
     path('panel/facturacion/consulta/', facturacion_views.consulta_facturas, name='consulta_facturas'),
     path('panel/facturacion/nueva/', facturacion_views.nueva_factura, name='nueva_factura'),
+    path('panel/facturacion/reporte-ventas/', facturacion_views.reporte_ventas, name='reporte_ventas'),
+    path('panel/facturacion/devolucion/', facturacion_views.registrar_devolucion, name='registrar_devolucion'),
+    path('panel/facturacion/garantia/', facturacion_views.solicitud_garantia, name='solicitud_garantia'),
+    path('panel/facturacion/reporte-devoluciones-garantias/', facturacion_views.reporte_dg, name='reporte_dg'),
 ]

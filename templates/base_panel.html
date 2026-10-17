@@ -71,6 +71,17 @@
                href="{% url 'nueva_factura' %}">Nueva factura</a>
             <a class="value {% if request.resolver_match.url_name == 'consulta_facturas' %}active{% endif %}"
                href="{% url 'consulta_facturas' %}">Consulta de facturas</a>
+            <a class="value {% if request.resolver_match.url_name == 'reporte_ventas' %}active{% endif %}"
+               href="{% url 'reporte_ventas' %}">Reporte de ventas</a>
+
+            <a class="value {% if request.resolver_match.url_name == 'registrar_devolucion' %}active{% endif %}"
+               href="{% url 'registrar_devolucion' %}">Registrar devolución</a>
+
+            <a class="value {% if request.resolver_match.url_name == 'solicitud_garantia' %}active{% endif %}"
+               href="{% url 'solicitud_garantia' %}">Solicitud de garantía</a>
+
+            <a class="value {% if request.resolver_match.url_name == 'reporte_dg' %}active{% endif %}"
+               href="{% url 'reporte_dg' %}">Reporte de devoluciones y garantías</a>
 
         </nav>
 

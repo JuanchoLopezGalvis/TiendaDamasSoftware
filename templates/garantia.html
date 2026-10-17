@@ -1,0 +1,126 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Solicitud de garantía{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Solicitud de garantía</h1>
+    <p class="pagina-sub">Creación, seguimiento y aprobación de garantías</p>
+
+    <div class="roles-grid">
+
+        <!-- ========== Nueva solicitud (vendedor) ========== -->
+        <section class="card">
+            <h2 class="card-titulo">Nueva solicitud</h2>
+
+            <div class="buscar-producto" style="margin-bottom: 18px;">
+                <div class="campo">
+                    <label for="factura">N.º de factura</label>
+                    <input type="text" id="factura" value="0001245" autocomplete="off">
+                </div>
+                <button type="button" class="btn-secundario">Buscar</button>
+            </div>
+
+            <div class="aviso">Factura 0001245 - María Gómez - 20/09/2026</div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div class="campo">
+                        <label for="detalle">Producto</label>
+                        <select id="detalle" required>
+                            <option value="" selected disabled>Seleccionar producto…</option>
+                            <option>101BLU · Blusa manga larga básica</option>
+                            <option>201BOL · Bolso de mano cuero sintético</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="motivo">Tipo de falla</label>
+                        <select id="motivo" required>
+                            <option value="" selected disabled>Seleccionar tipo de falla</option>
+                            <option>Defecto de fabricación</option>
+                            <option>Costura o cierre dañado</option>
+                            <option>Material deteriorado</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="descripcion">Descripción de la falla</label>
+                        <textarea id="descripcion" class="input-tabla" maxlength="1000" required
+                                  style="width: 100%; height: 90px; padding: 8px 10px; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <div class="aviso" style="margin-top: 18px;">
+                    La garantía se puede solicitar hasta 90 días después de la compra.
+                </div>
+
+                <div class="acciones">
+                    <button type="submit" class="btn-primario">Crear solicitud</button>
+                    <button type="reset" class="btn-secundario">Cancelar</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ========== Solicitudes (auxiliar / gerente) ========== -->
+        <section class="card">
+            <h2 class="card-titulo">Solicitudes de garantía</h2>
+
+            <table class="tabla sin-derecha">
+                <thead>
+                    <tr>
+                        <th>N.º</th>
+                        <th>Producto</th>
+                        <th>Acciones</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>G-0012</td>
+                        <td>Bolso de mano<br><small style="color: var(--muted);">Costura o cierre dañado</small></td>
+                        <td>
+                            <input type="text" class="input-tabla" placeholder="Comentario" style="width: 100%; margin-bottom: 6px;">
+                            <button type="button" class="btn-secundario btn-chico">En trámite</button>
+                            <button type="button" class="btn-primario btn-chico">Aprobar</button>
+                            <button type="button" class="btn-secundario btn-chico">Rechazar</button>
+                        </td>
+                        <td><span class="pill pill-off">Recibida</span></td>
+                    </tr>
+                    <tr>
+                        <td>G-0011</td>
+                        <td>Chaqueta denim<br><small style="color: var(--muted);">Defecto de fabricación</small></td>
+                        <td>
+                            <input type="text" class="input-tabla" placeholder="Comentario" style="width: 100%; margin-bottom: 6px;">
+                            <button type="button" class="btn-primario btn-chico">Aprobar</button>
+                            <button type="button" class="btn-secundario btn-chico">Rechazar</button>
+                        </td>
+                        <td><span class="pill pill-warn">En trámite</span></td>
+                    </tr>
+                    <tr>
+                        <td>G-0010</td>
+                        <td>Zapatos tacón<br><small style="color: var(--muted);">Material deteriorado</small></td>
+                        <td>—</td>
+                        <td><span class="pill pill-ok">Aprobada</span></td>
+                    </tr>
+                    <tr>
+                        <td>G-0009</td>
+                        <td>Blusa de gasa<br><small style="color: var(--muted);">Otro</small></td>
+                        <td>—</td>
+                        <td><span class="pill pill-error">Rechazada</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="aviso aviso-warn">
+                La auxiliar actualiza el estado; el gerente aprueba o rechaza (el rechazo exige un comentario).
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

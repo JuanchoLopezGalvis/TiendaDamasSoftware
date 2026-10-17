@@ -29,3 +29,21 @@ def nueva_factura(request):
         'productos': PRODUCTOS,
         'hoy': timezone.localdate().isoformat(),
     })
+@login_required
+def reporte_ventas(request):
+    return render(request, 'reporte_ventas.html')
+
+
+@login_required
+def registrar_devolucion(request):
+    return render(request, 'devolucion.html')
+
+
+@login_required
+def solicitud_garantia(request):
+    return render(request, 'garantia.html')
+
+
+@login_required
+def reporte_dg(request):
+    return render(request, 'reporte_dg.html')

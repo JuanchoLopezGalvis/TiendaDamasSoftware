@@ -1,0 +1,78 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Reporte de devoluciones y garantías{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Reporte de devoluciones y garantías</h1>
+    <p class="pagina-sub">Agrupable por periodo, producto, clienta y motivo</p>
+
+    <section class="card">
+
+        <div class="filtros">
+            <div class="campo">
+                <label for="periodo">Periodo</label>
+                <select id="periodo">
+                    <option>Hoy</option>
+                    <option>Últimos 7 días</option>
+                    <option selected>Este mes</option>
+                    <option>Mes anterior</option>
+                    <option>Este año</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="producto">Producto</label>
+                <select id="producto" style="max-width: 240px;">
+                    <option>Todos</option>
+                    <option>101BLU · Blusa manga larga básica</option>
+                    <option>201BOL · Bolso de mano cuero sintético</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="motivo">Motivo</label>
+                <select id="motivo">
+                    <option>Todos</option>
+                    <option>Talla incorrecta</option>
+                    <option>Producto defectuoso</option>
+                    <option>Costura o cierre dañado</option>
+                    <option>Defecto de fabricación</option>
+                    <option>Material deteriorado</option>
+                    <option>Otro</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="agrupar">Agrupar por</label>
+                <select id="agrupar">
+                    <option selected>Producto</option>
+                    <option>Clienta</option>
+                    <option>Mes</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn-secundario">Generar</button>
+        </div>
+
+        <table class="tabla sin-derecha" style="margin-bottom: 0;">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>N.º devoluciones</th>
+                    <th>N.º garantías</th>
+                    <th>Motivo más frecuente</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Blusa manga larga</td><td>5</td><td>0</td><td>Talla incorrecta</td></tr>
+                <tr><td>Bolso de mano</td><td>1</td><td>3</td><td>Costura o cierre dañado</td></tr>
+                <tr><td>Zapatos tacón</td><td>2</td><td>2</td><td>Material deteriorado</td></tr>
+                <tr><td><strong>Total</strong></td><td><strong>8</strong></td><td><strong>5</strong></td><td></td></tr>
+            </tbody>
+        </table>
+
+    </section>
+</div>
+{% endblock %}

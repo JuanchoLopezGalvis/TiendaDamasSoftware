@@ -1,0 +1,109 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Reporte de ventas{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Reporte de ventas</h1>
+    <p class="pagina-sub">Filtrable por periodo, vendedor o producto</p>
+
+    <section class="card">
+
+        <div class="filtros">
+            <div class="campo">
+                <label for="periodo">Periodo</label>
+                <select id="periodo">
+                    <option>Hoy</option>
+                    <option>Últimos 7 días</option>
+                    <option selected>Este mes</option>
+                    <option>Mes anterior</option>
+                    <option>Este año</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="vendedor">Vendedor</label>
+                <select id="vendedor">
+                    <option>Todos</option>
+                    <option>Francisco</option>
+                    <option>Jhonatan</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="producto">Producto</label>
+                <select id="producto" style="max-width: 260px;">
+                    <option>Todos</option>
+                    <option>101BLU · Blusa manga larga básica</option>
+                    <option>121VES · Vestido midi floral</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn-secundario">Generar</button>
+        </div>
+
+        <div class="fila-campos">
+            <div class="aviso" style="flex: 1; margin: 0;">Total vendido: <strong>$5.100.000</strong></div>
+            <div class="aviso" style="flex: 1; margin: 0;">N.º de ventas: <strong>55</strong></div>
+            <div class="aviso" style="flex: 1; margin: 0;">Venta promedio: <strong>$92.727</strong></div>
+        </div>
+
+        <div class="roles-grid">
+
+            <div>
+                <table class="tabla sin-derecha">
+                    <thead>
+                        <tr>
+                            <th>Vendedor</th>
+                            <th style="text-align: right;">N.º ventas</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Francisco</td>
+                            <td style="text-align: right;">34</td>
+                            <td style="text-align: right;">$3.120.000</td>
+                        </tr>
+                        <tr>
+                            <td>Jhonatan</td>
+                            <td style="text-align: right;">21</td>
+                            <td style="text-align: right;">$1.980.000</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total</strong></td>
+                            <td style="text-align: right;"><strong>55</strong></td>
+                            <td style="text-align: right;"><strong>$5.100.000</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <h2 class="card-titulo">Ventas por periodo</h2>
+                <div style="display: flex; align-items: flex-end; gap: 6px; height: 180px; border-bottom: 2px solid var(--border);">
+                    <div style="flex: 1; height: 30%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="01/10: $300.000"></div>
+                    <div style="flex: 1; height: 55%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="02/10: $550.000"></div>
+                    <div style="flex: 1; height: 42%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="03/10: $420.000"></div>
+                    <div style="flex: 1; height: 80%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="04/10: $800.000"></div>
+                    <div style="flex: 1; height: 65%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="05/10: $650.000"></div>
+                    <div style="flex: 1; height: 100%; background: var(--primary); border-radius: 3px 3px 0 0;" title="06/10: $1.000.000"></div>
+                    <div style="flex: 1; height: 48%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="07/10: $480.000"></div>
+                </div>
+                <div style="display: flex; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 4px;">
+                    <span style="flex: 1; text-align: center;">01/10</span>
+                    <span style="flex: 1; text-align: center;">02/10</span>
+                    <span style="flex: 1; text-align: center;">03/10</span>
+                    <span style="flex: 1; text-align: center;">04/10</span>
+                    <span style="flex: 1; text-align: center;">05/10</span>
+                    <span style="flex: 1; text-align: center;">06/10</span>
+                    <span style="flex: 1; text-align: center;">07/10</span>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+</div>
+{% endblock %}
