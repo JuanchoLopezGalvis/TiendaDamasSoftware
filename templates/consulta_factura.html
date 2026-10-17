@@ -13,22 +13,22 @@
         <form method="get" class="filtros">
             <div class="campo">
                 <label for="numero">N.º de factura</label>
-                <input type="text" id="numero" name="numero">
+                <input type="text" id="numero" name="numero" value="{{ f.numero }}">
             </div>
             <div class="campo">
                 <label for="cliente">Cliente</label>
-                <input type="text" id="cliente" name="cliente">
+                <input type="text" id="cliente" name="cliente" value="{{ f.cliente }}">
             </div>
             <div class="campo">
                 <label for="fecha">Fecha</label>
-                <input type="date" id="fecha" name="fecha">
+                <input type="date" id="fecha" name="fecha" value="{{ f.fecha }}">
             </div>
             <div class="campo">
                 <label for="estado">Estado</label>
                 <select id="estado" name="estado" style="width: 160px;">
                     <option value="">Todos</option>
-                    {% for e in estados %}
-                        <option value="{{ e }}">{{ e }}</option>
+                    {% for valor, etiqueta in estados %}
+                        <option value="{{ valor }}" {% if f.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -46,13 +46,13 @@
                 </tr>
             </thead>
             <tbody>
-                {% for f in facturas %}
+                {% for fa in facturas %}
                 <tr>
-                    <td>{{ f.numero }}</td>
-                    <td>{{ f.cliente }}</td>
-                    <td>{{ f.fecha }}</td>
-                    <td>{{ f.total }}</td>
-                    <td><span class="pill {{ f.clase }}">{{ f.estado }}</span></td>
+                    <td>{{ fa.numero }}</td>
+                    <td>{{ fa.cliente }}</td>
+                    <td>{{ fa.fecha }}</td>
+                    <td>{{ fa.total }}</td>
+                    <td><span class="pill {{ fa.clase }}">{{ fa.estado }}</span></td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="5">No hay facturas.</td></tr>

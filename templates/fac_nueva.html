@@ -8,18 +8,22 @@
 
     <h1 class="pagina-titulo">Nueva factura</h1>
     <p class="pagina-sub">Registra una venta agregando los productos por su código</p>
-
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
     <form method="post" id="formFactura" class="card">
         {% csrf_token %}
 
         <div class="fila-campos">
             <div class="campo campo-grande">
-                <label for="cliente">Cliente</label>
-                <input type="text" id="cliente" name="cliente" list="listaClientes"
-                       placeholder="Buscar cliente…" autocomplete="off" required>
-                <datalist id="listaClientes">
-                    {% for c in clientes %}<option value="{{ c }}">{% endfor %}
-                </datalist>
+                <label for="nombres">Nombres del cliente</label>
+                <input type="text" id="nombres" name="nombres" maxlength="100" autocomplete="off" required>
+            </div>
+            <div class="campo campo-grande">
+                <label for="apellidos">Apellidos del cliente</label>
+                <input type="text" id="apellidos" name="apellidos" maxlength="100" autocomplete="off" required>
             </div>
             <div class="campo">
                 <label for="fecha">Fecha</label>
