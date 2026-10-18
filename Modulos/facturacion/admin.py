@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from Modulos.facturacion.models import Cliente, DetalleFactura, Factura, Producto
+from Modulos.facturacion.models import Devolucion, DetalleDevolucion
 
 
 class DetalleInline(admin.TabularInline):
@@ -24,3 +25,16 @@ class ProductoAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Cliente)
+
+class LineaDevolucionInline(admin.TabularInline):
+    model = DetalleDevolucion
+    extra = 0
+    can_delete = False
+    readonly_fields = ('detalle_factura', 'cantidad')
+
+
+@admin.register(Devolucion)
+class DevolucionAdmin(admin.ModelAdmin):
+    list_display = ('numero', 'factura', 'motivo', 'tipo_resolucion', 'usuario', 'fecha_devolucion')
+    list_filter = ('motivo', 'tipo_resolucion')
+    inlines = [LineaDevolucionInline]

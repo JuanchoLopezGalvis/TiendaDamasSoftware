@@ -8,80 +8,108 @@
     <h1 class="pagina-titulo">Registrar devolución</h1>
     <p class="pagina-sub">Devolución y validación contra la factura</p>
 
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
     <section class="card">
 
-        <div class="buscar-producto" style="margin-bottom: 18px;">
+        <form method="get" class="buscar-producto" style="margin-bottom: 18px;">
             <div class="campo">
                 <label for="factura">N.º de factura</label>
-                <input type="text" id="factura" value="0001245" autocomplete="off">
+                <input type="text" id="factura" name="factura" value="{{ texto }}" autocomplete="off" required>
             </div>
-            <button type="button" class="btn-secundario">Buscar factura</button>
-        </div>
-
-        <div class="aviso">Factura 0001245 - María Gómez - 20/09/2026 - $209.000</div>
-
-        <form method="post">
-            {% csrf_token %}
-
-            <table class="tabla sin-derecha">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Producto</th>
-                        <th>Comprada</th>
-                        <th>Ya devuelta</th>
-                        <th>Cantidad a devolver</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><input type="checkbox"></td>
-                        <td>101BLU · Blusa manga larga básica</td>
-                        <td>1</td>
-                        <td>0</td>
-                        <td><input type="number" class="input-tabla corto" min="1" max="1" value="1"></td>
-                    </tr>
-                    <tr>
-                        <td><input type="checkbox"></td>
-                        <td>201BOL · Bolso de mano cuero sintético</td>
-                        <td>2</td>
-                        <td>1</td>
-                        <td><input type="number" class="input-tabla corto" min="1" max="1" value="1"></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div style="display: flex; flex-direction: column; gap: 14px; max-width: 560px;">
-                <div class="campo">
-                    <label for="motivo">Motivo de la devolución</label>
-                    <select id="motivo" required>
-                        <option value="" selected disabled>Seleccionar motivo</option>
-                        <option>Talla incorrecta</option>
-                        <option>Producto defectuoso</option>
-                        <option>Otro</option>
-                    </select>
-                </div>
-
-                <div class="campo">
-                    <label for="observacion">Observaciones (obligatorias si el motivo es «Otro»)</label>
-                    <input type="text" id="observacion" maxlength="255">
-                </div>
-
-                <label style="display: flex; align-items: center; gap: 8px; color: var(--text);">
-                    <input type="checkbox">
-                    El producto conserva las etiquetas intactas
-                </label>
-            </div>
-
-            <div class="aviso" style="margin-top: 18px;">
-                El sistema valida que el producto pertenezca a la factura, que no se devuelva más de lo comprado y que el plazo (30 días) esté vigente.
-            </div>
-
-            <div class="acciones">
-                <button type="submit" class="btn-primario">Registrar devolución</button>
-                <button type="reset" class="btn-secundario">Cancelar</button>
-            </div>
+            <button type="submit" class="btn-secundario">Buscar factura</button>
         </form>
+
+        {% if factura %}
+
+            <div class="aviso">
+                Factura {{ factura.numero }} - {{ factura.cliente.nombre_completo }}
+                - {{ factura.fecha_factura|date:"d/m/Y" }} - {{ factura_total }}
+            </div>
+
+            {% for p in problemas %}
+                <div class="aviso aviso-warn">{{ p }}</div>
+            {% endfor %}
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="factura" value="{{ factura.numero }}">
+
+                <table class="tabla sin-derecha">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Producto</th>
+                            <th>Comprada</th>
+                            <th>Ya devuelta</th>
+                            <th>Cantidad a devolver</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in lineas %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="detalle" value="{{ l.detalle.pk }}"
+                                       {% if not l.disponible or problemas %}disabled{% endif %}>
+                            </td>
+                            <td>{{ l.detalle.producto.codigo }} · {{ l.detalle.producto.nombre_producto }}</td>
+                            <td>{{ l.comprado }}</td>
+                            <td>{{ l.devuelto }}</td>
+                            <td>
+                                <input type="number" class="input-tabla corto" name="cantidad_{{ l.detalle.pk }}"
+                                       min="1" max="{{ l.disponible }}"
+                                       value="{% if l.disponible %}1{% else %}0{% endif %}"
+                                       {% if not l.disponible or problemas %}disabled{% endif %}>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div style="display: flex; flex-direction: column; gap: 14px; max-width: 560px;">
+                    <div class="campo">
+                        <label for="motivo">Motivo de la devolución</label>
+                        <select id="motivo" name="motivo" required {% if problemas %}disabled{% endif %}>
+                            <option value="" selected disabled>Seleccionar motivo</option>
+                            {% for valor, etiqueta in motivos %}
+                                <option value="{{ valor }}">{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="tipo_resolucion">Tipo de resolución</label>
+                        <select id="tipo_resolucion" name="tipo_resolucion" required {% if problemas %}disabled{% endif %}>
+                            <option value="" selected disabled>Seleccionar resolución</option>
+                            {% for valor, etiqueta in resoluciones %}
+                                <option value="{{ valor }}">{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <label style="display: flex; align-items: center; gap: 8px; color: var(--text);">
+                        <input type="checkbox" name="etiquetas" {% if problemas %}disabled{% endif %}>
+                        El producto conserva las etiquetas intactas
+                    </label>
+                </div>
+
+                <div class="aviso" style="margin-top: 18px;">
+                    El sistema valida que el producto pertenezca a la factura, que no se devuelva más de lo comprado y que el plazo ({{ plazo }} días) esté vigente.
+                </div>
+
+                <div class="acciones">
+                    <button type="submit" class="btn-primario" {% if problemas %}disabled{% endif %}>Registrar devolución</button>
+                    <a class="btn-secundario btn-enlace" href="{% url 'registrar_devolucion' %}">Cancelar</a>
+                </div>
+            </form>
+
+        {% else %}
+            <p class="nota">Escribe el número de la factura y pulsa «Buscar factura».</p>
+        {% endif %}
 
     </section>
 </div>

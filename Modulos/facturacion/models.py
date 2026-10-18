@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+PLAZO_DEVOLUCION_DIAS = 30   # días desde la fecha de la factura
+
 
 class Cliente(models.Model):                          # CLIENTES
     nombres = models.CharField(max_length=100)        # nombres_cliente
@@ -70,3 +72,41 @@ class DetalleFactura(models.Model):                   # DETALLE_FACTURA
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='ventas')
     cantidad = models.PositiveIntegerField()
     precio_acumulado = models.PositiveIntegerField()   # cantidad × precio unitario
+
+
+class Devolucion(models.Model):                       # DEVOLUCION
+    class Motivo(models.TextChoices):
+        TALLA = 'talla_incorrecta', 'Talla incorrecta'
+        DEFECTUOSO = 'defectuoso', 'Producto defectuoso'
+        OTRO = 'otro', 'Otro'
+
+    class Resolucion(models.TextChoices):
+        REEMBOLSO = 'reembolso', 'Reembolso'
+        CAMBIO = 'cambio', 'Cambio de producto'
+        NOTA_CREDITO = 'nota_credito', 'Nota crédito'
+
+    factura = models.ForeignKey(Factura, on_delete=models.PROTECT, related_name='devoluciones')
+    motivo = models.CharField(max_length=20, choices=Motivo.choices)
+    fecha_devolucion = models.DateTimeField(auto_now_add=True)
+    tipo_resolucion = models.CharField(max_length=20, choices=Resolucion.choices)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='devoluciones'
+    )
+
+    class Meta:
+        ordering = ['-fecha_devolucion']
+
+    def __str__(self):
+        return f'Devolución {self.numero}'
+
+    @property
+    def numero(self):
+        return f'D-{self.pk:04d}'
+
+
+class DetalleDevolucion(models.Model):                # DETALLE_DEVOLUCION
+    devolucion = models.ForeignKey(Devolucion, on_delete=models.CASCADE, related_name='lineas')
+    detalle_factura = models.ForeignKey(
+        DetalleFactura, on_delete=models.PROTECT, related_name='lineas_devueltas'
+    )
+    cantidad = models.PositiveIntegerField()
