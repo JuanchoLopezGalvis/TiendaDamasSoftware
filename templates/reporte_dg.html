@@ -10,68 +10,82 @@
 
     <section class="card">
 
-        <div class="filtros">
+        <form method="get" class="filtros">
             <div class="campo">
                 <label for="periodo">Periodo</label>
-                <select id="periodo">
-                    <option>Hoy</option>
-                    <option>Últimos 7 días</option>
-                    <option selected>Este mes</option>
-                    <option>Mes anterior</option>
-                    <option>Este año</option>
+                <select id="periodo" name="periodo">
+                    {% for valor, etiqueta in periodos %}
+                        <option value="{{ valor }}" {% if periodo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="campo">
                 <label for="producto">Producto</label>
-                <select id="producto" style="max-width: 240px;">
-                    <option>Todos</option>
-                    <option>101BLU · Blusa manga larga básica</option>
-                    <option>201BOL · Bolso de mano cuero sintético</option>
+                <select id="producto" name="producto" style="max-width: 240px;">
+                    <option value="">Todos</option>
+                    {% for p in productos %}
+                        <option value="{{ p.id }}" {% if producto == p.id|stringformat:"s" %}selected{% endif %}>{{ p.codigo }} · {{ p.nombre_producto }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="campo">
                 <label for="motivo">Motivo</label>
-                <select id="motivo">
-                    <option>Todos</option>
-                    <option>Talla incorrecta</option>
-                    <option>Producto defectuoso</option>
-                    <option>Costura o cierre dañado</option>
-                    <option>Defecto de fabricación</option>
-                    <option>Material deteriorado</option>
-                    <option>Otro</option>
+                <select id="motivo" name="motivo">
+                    <option value="">Todos</option>
+                    {% for valor, etiqueta in motivos %}
+                        <option value="{{ valor }}" {% if motivo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="campo">
                 <label for="agrupar">Agrupar por</label>
-                <select id="agrupar">
-                    <option selected>Producto</option>
-                    <option>Clienta</option>
-                    <option>Mes</option>
+                <select id="agrupar" name="agrupar">
+                    <option value="producto" {% if agrupar == 'producto' %}selected{% endif %}>Producto</option>
+                    <option value="cliente" {% if agrupar == 'cliente' %}selected{% endif %}>Clienta</option>
+                    <option value="mes" {% if agrupar == 'mes' %}selected{% endif %}>Mes</option>
                 </select>
             </div>
 
-            <button type="button" class="btn-secundario">Generar</button>
-        </div>
+            <button type="submit" class="btn-secundario">Generar</button>
+        </form>
 
         <table class="tabla sin-derecha" style="margin-bottom: 0;">
             <thead>
                 <tr>
-                    <th>Producto</th>
+                    <th>{{ titulo_grupo }}</th>
                     <th>N.º devoluciones</th>
                     <th>N.º garantías</th>
                     <th>Motivo más frecuente</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td>Blusa manga larga</td><td>5</td><td>0</td><td>Talla incorrecta</td></tr>
-                <tr><td>Bolso de mano</td><td>1</td><td>3</td><td>Costura o cierre dañado</td></tr>
-                <tr><td>Zapatos tacón</td><td>2</td><td>2</td><td>Material deteriorado</td></tr>
-                <tr><td><strong>Total</strong></td><td><strong>8</strong></td><td><strong>5</strong></td><td></td></tr>
+                {% for f in filas %}
+                <tr>
+                    <td>{{ f.grupo }}</td>
+                    <td>{{ f.devoluciones }}</td>
+                    <td>{{ f.garantias }}</td>
+                    <td>{{ f.motivo }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">No hay devoluciones ni garantías con estos filtros.</td></tr>
+                {% endfor %}
+                {% if filas|length > 1 %}
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td><strong>{{ total_dev }}</strong></td>
+                    <td><strong>{{ total_gar }}</strong></td>
+                    <td></td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
+
+        <div class="aviso">
+            Cada producto devuelto cuenta como una devolución. El motivo es solo de las devoluciones; al filtrar por motivo, las garantías no se cuentan.
+        </div>
 
     </section>
 </div>

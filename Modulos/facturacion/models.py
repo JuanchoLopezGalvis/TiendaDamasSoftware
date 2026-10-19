@@ -110,3 +110,37 @@ class DetalleDevolucion(models.Model):                # DETALLE_DEVOLUCION
         DetalleFactura, on_delete=models.PROTECT, related_name='lineas_devueltas'
     )
     cantidad = models.PositiveIntegerField()
+
+class Garantia(models.Model):  # GARANTIA
+        class Estado(models.TextChoices):
+            SOLICITADA = 'solicitada', 'Solicitada'
+            TRAMITE = 'en_tramite', 'En trámite'
+            APROBADA = 'aprobada', 'Aprobada'
+            RECHAZADA = 'rechazada', 'Rechazada'
+            REPUESTA = 'repuesta', 'Repuesta'
+
+        detalle_factura = models.ForeignKey(
+            DetalleFactura, on_delete=models.PROTECT, related_name='garantias'
+        )
+        descripcion = models.TextField(max_length=1000)
+        estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.SOLICITADA)
+        usuario_vendedor = models.ForeignKey(
+            settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='garantias_solicitadas'
+        )
+        usuario_gerente = models.ForeignKey(
+            settings.AUTH_USER_MODEL, null=True, blank=True,
+            on_delete=models.SET_NULL, related_name='garantias_decididas',
+        )
+        fecha_solicitud = models.DateTimeField(auto_now_add=True)
+        fecha_decision = models.DateTimeField(null=True, blank=True)
+        fecha_reposicion = models.DateTimeField(null=True, blank=True)
+
+        class Meta:
+            ordering = ['-fecha_solicitud']
+
+        def __str__(self):
+            return f'Garantía {self.numero}'
+
+        @property
+        def numero(self):
+            return f'G-{self.pk:04d}'
