@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from datetime import date, timedelta
 from django.contrib.auth import get_user_model
+from collections import Counter
 
 from Modulos.usuarios.auditoria import registrar
 from Modulos.usuarios.models import Auditoria
@@ -15,7 +16,7 @@ from django.db.models.functions import Coalesce
 
 from Modulos.facturacion.models import (
     PLAZO_DEVOLUCION_DIAS, Cliente, DetalleDevolucion, DetalleFactura,
-    Devolucion, Factura, Producto,
+    Devolucion, Factura, Garantia, Producto,
 )
 
 # Create your views here.
@@ -391,4 +392,79 @@ def solicitud_garantia(request):
 
 @login_required
 def reporte_dg(request):
-    return render(request, 'reporte_dg.html')
+    periodo = request.GET.get('periodo', 'mes')
+    if periodo not in dict(PERIODOS):
+        periodo = 'mes'
+    producto = request.GET.get('producto', '')
+    motivo = request.GET.get('motivo', '')
+    agrupar = request.GET.get('agrupar', 'producto')
+    if agrupar not in ('producto', 'cliente', 'mes'):
+        agrupar = 'producto'
+    desde, hasta = _rango(periodo)
+
+    devs = DetalleDevolucion.objects.select_related(
+        'devolucion', 'detalle_factura__producto', 'detalle_factura__factura__cliente')
+    gars = Garantia.objects.select_related(
+        'detalle_factura__producto', 'detalle_factura__factura__cliente')
+
+    if desde:
+        devs = devs.filter(devolucion__fecha_devolucion__date__gte=desde)
+        gars = gars.filter(fecha_solicitud__date__gte=desde)
+    if hasta:
+        devs = devs.filter(devolucion__fecha_devolucion__date__lte=hasta)
+        gars = gars.filter(fecha_solicitud__date__lte=hasta)
+    if _entero(producto):
+        devs = devs.filter(detalle_factura__producto_id=int(producto))
+        gars = gars.filter(detalle_factura__producto_id=int(producto))
+
+    # El motivo solo existe en las devoluciones: al filtrarlo, las garantías quedan fuera
+    if motivo in Devolucion.Motivo.values:
+        devs = devs.filter(devolucion__motivo=motivo)
+        gars = gars.none()
+    else:
+        motivo = ''
+
+    def clave(detalle, fecha):
+        if agrupar == 'producto':
+            return f'{detalle.producto.codigo} · {detalle.producto.nombre_producto}'
+        if agrupar == 'cliente':
+            return detalle.factura.cliente.nombre_completo
+        return timezone.localtime(fecha).strftime('%Y-%m')
+
+    grupos = {}
+
+    def grupo(k):
+        return grupos.setdefault(k, {'dev': 0, 'gar': 0, 'motivos': Counter()})
+
+    for l in devs:
+        g = grupo(clave(l.detalle_factura, l.devolucion.fecha_devolucion))
+        g['dev'] += 1
+        g['motivos'][l.devolucion.get_motivo_display()] += 1
+    for gr in gars:
+        grupo(clave(gr.detalle_factura, gr.fecha_solicitud))['gar'] += 1
+
+    filas = []
+    for nombre, g in grupos.items():
+        top = sorted(g['motivos'].items(), key=lambda kv: (-kv[1], kv[0]))
+        filas.append({
+            'grupo': nombre,
+            'devoluciones': g['dev'],
+            'garantias': g['gar'],
+            'motivo': top[0][0] if top else '—',
+        })
+
+    if agrupar == 'mes':
+        filas.sort(key=lambda f: f['grupo'], reverse=True)
+    else:
+        filas.sort(key=lambda f: (-(f['devoluciones'] + f['garantias']), f['grupo']))
+
+    return render(request, 'reporte_dg.html', {
+        'periodos': PERIODOS, 'periodo': periodo,
+        'producto': producto, 'motivo': motivo, 'agrupar': agrupar,
+        'productos': Producto.objects.all(),
+        'motivos': Devolucion.Motivo.choices,
+        'filas': filas,
+        'total_dev': sum(f['devoluciones'] for f in filas),
+        'total_gar': sum(f['garantias'] for f in filas),
+        'titulo_grupo': {'producto': 'Producto', 'cliente': 'Clienta', 'mes': 'Mes'}[agrupar],
+    })
