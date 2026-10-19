@@ -14,9 +14,11 @@ from Modulos.usuarios.auditoria import registrar
 from Modulos.usuarios.models import Auditoria
 from django.db.models.functions import Coalesce
 
+from django.core.exceptions import PermissionDenied
+
 from Modulos.facturacion.models import (
-    PLAZO_DEVOLUCION_DIAS, Cliente, DetalleDevolucion, DetalleFactura,
-    Devolucion, Factura, Garantia, Producto,
+    PLAZO_DEVOLUCION_DIAS, PLAZO_GARANTIA_DIAS, Cliente, DetalleDevolucion,
+    DetalleFactura, Devolucion, Factura, Garantia, Producto, SeguimientoGarantia,
 )
 
 # Create your views here.
@@ -385,9 +387,145 @@ def registrar_devolucion(request):
     })
 
 
+ESTADOS_ABIERTOS = [
+    Garantia.Estado.SOLICITADA, Garantia.Estado.TRAMITE, Garantia.Estado.APROBADA,
+]
+
+
+def _problemas_garantia(factura):
+    problemas = []
+    if factura.estado == Factura.Estado.ANULADA:
+        problemas.append('La factura está anulada.')
+    dias = (timezone.localdate() - factura.fecha_factura).days
+    if dias > PLAZO_GARANTIA_DIAS:
+        problemas.append(
+            f'El plazo para solicitar garantía ({PLAZO_GARANTIA_DIAS} días) ya venció: '
+            f'la compra fue hace {dias} días.')
+    return problemas
+
+
 @login_required
 def solicitud_garantia(request):
-    return render(request, 'garantia.html')
+    u = request.user
+    puede_crear = u.has_perm('facturacion.add_garantia')
+    puede_tramitar = u.has_perm('facturacion.seguimiento_garantia')
+    puede_decidir = u.has_perm('facturacion.aprobar_garantia')
+    if not (puede_crear or puede_tramitar or puede_decidir):
+        raise PermissionDenied
+
+    url = reverse('solicitud_garantia')
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion', '')
+
+        # ---------- Vendedor: crear la solicitud ----------
+        if accion == 'crear':
+            if not puede_crear:
+                raise PermissionDenied
+
+            factura = _buscar_factura(request.POST.get('factura'))
+            if factura is None:
+                messages.error(request, 'La factura no existe.')
+                return redirect(url)
+            back = f'{url}?factura={factura.numero}'
+
+            detalle = factura.detalles.select_related('producto').filter(
+                pk=_entero(request.POST.get('detalle'))).first()
+            descripcion = request.POST.get('descripcion', '').strip()[:1000]
+
+            errores = _problemas_garantia(factura)
+            if detalle is None:
+                errores.append('Selecciona un producto de la factura.')
+            elif Garantia.objects.filter(
+                    detalle_factura=detalle, estado__in=ESTADOS_ABIERTOS).exists():
+                errores.append('Ese producto ya tiene una garantía en curso.')
+            if not descripcion:
+                errores.append('Describe la falla del producto.')
+
+            if errores:
+                for e in errores:
+                    messages.error(request, e)
+                return redirect(back)
+
+            garantia = Garantia.objects.create(
+                detalle_factura=detalle, descripcion=descripcion, usuario_vendedor=u)
+            registrar(request, Auditoria.Evento.CREACION,
+                      f'Garantía {garantia.numero}: {detalle.producto.nombre_producto} '
+                      f'(factura {factura.numero})')
+            messages.success(request, f'Solicitud {garantia.numero} creada.')
+            return redirect(url)
+
+        # ---------- Auxiliar y gerente: cambiar el estado ----------
+        if accion in ('tramite', 'repuesta', 'aprobar', 'rechazar'):
+            garantia = Garantia.objects.filter(pk=_entero(request.POST.get('garantia'))).first()
+            Estado = Garantia.Estado
+
+            if garantia is None:
+                messages.error(request, 'La solicitud no existe.')
+                return redirect(url)
+
+            if accion in ('tramite', 'repuesta'):
+                if not puede_tramitar:
+                    raise PermissionDenied
+                esperado, nuevo = (
+                    (Estado.SOLICITADA, Estado.TRAMITE) if accion == 'tramite'
+                    else (Estado.APROBADA, Estado.REPUESTA)
+                )
+                if garantia.estado != esperado:
+                    messages.error(request, f'{garantia.numero} ya no está en estado "{Estado(esperado).label}".')
+                    return redirect(url)
+                with transaction.atomic():
+                    garantia.estado = nuevo
+                    campos = ['estado']
+                    if nuevo == Estado.REPUESTA:
+                        garantia.fecha_reposicion = timezone.now()
+                        campos.append('fecha_reposicion')
+                    garantia.save(update_fields=campos)
+                    SeguimientoGarantia.objects.create(
+                        garantia=garantia, usuario_auxiliar=u, estado=nuevo)
+            else:
+                if not puede_decidir:
+                    raise PermissionDenied
+                if garantia.estado not in (Estado.SOLICITADA, Estado.TRAMITE):
+                    messages.error(request, f'{garantia.numero} ya fue resuelta.')
+                    return redirect(url)
+                garantia.estado = Estado.APROBADA if accion == 'aprobar' else Estado.RECHAZADA
+                garantia.usuario_gerente = u
+                garantia.fecha_decision = timezone.now()
+                garantia.save(update_fields=['estado', 'usuario_gerente', 'fecha_decision'])
+
+            messages.success(request, f'{garantia.numero}: {garantia.get_estado_display().lower()}.')
+            return redirect(url)
+
+        return redirect(url)
+
+    # ---------- Mostrar ----------
+    texto = request.GET.get('factura', '').strip()
+    factura, detalles, problemas = None, [], []
+    if texto and puede_crear:
+        factura = _buscar_factura(texto)
+        if factura is None:
+            messages.error(request, f'No existe la factura "{texto}".')
+        else:
+            detalles = list(factura.detalles.select_related('producto').order_by('pk'))
+            problemas = _problemas_garantia(factura)
+
+    Estado = Garantia.Estado
+    garantias = Garantia.objects.select_related(
+        'detalle_factura__producto', 'detalle_factura__factura', 'usuario_vendedor')[:30]
+    filas = [{
+        'g': g,
+        'tramitar': puede_tramitar and g.estado == Estado.SOLICITADA,
+        'reponer': puede_tramitar and g.estado == Estado.APROBADA,
+        'decidir': puede_decidir and g.estado in (Estado.SOLICITADA, Estado.TRAMITE),
+    } for g in garantias]
+
+    return render(request, 'garantia.html', {
+        'puede_crear': puede_crear,
+        'texto': texto, 'factura': factura, 'detalles': detalles, 'problemas': problemas,
+        'plazo': PLAZO_GARANTIA_DIAS,
+        'filas': filas,
+    })
 
 
 @login_required

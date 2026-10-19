@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 PLAZO_DEVOLUCION_DIAS = 30   # días desde la fecha de la factura
+PLAZO_GARANTIA_DIAS = 90     # días desde la fecha de la factura
 
 
 class Cliente(models.Model):                          # CLIENTES
@@ -111,36 +112,63 @@ class DetalleDevolucion(models.Model):                # DETALLE_DEVOLUCION
     )
     cantidad = models.PositiveIntegerField()
 
-class Garantia(models.Model):  # GARANTIA
-        class Estado(models.TextChoices):
-            SOLICITADA = 'solicitada', 'Solicitada'
-            TRAMITE = 'en_tramite', 'En trámite'
-            APROBADA = 'aprobada', 'Aprobada'
-            RECHAZADA = 'rechazada', 'Rechazada'
-            REPUESTA = 'repuesta', 'Repuesta'
 
-        detalle_factura = models.ForeignKey(
-            DetalleFactura, on_delete=models.PROTECT, related_name='garantias'
-        )
-        descripcion = models.TextField(max_length=1000)
-        estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.SOLICITADA)
-        usuario_vendedor = models.ForeignKey(
-            settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='garantias_solicitadas'
-        )
-        usuario_gerente = models.ForeignKey(
-            settings.AUTH_USER_MODEL, null=True, blank=True,
-            on_delete=models.SET_NULL, related_name='garantias_decididas',
-        )
-        fecha_solicitud = models.DateTimeField(auto_now_add=True)
-        fecha_decision = models.DateTimeField(null=True, blank=True)
-        fecha_reposicion = models.DateTimeField(null=True, blank=True)
+class Garantia(models.Model):                         # GARANTIA
+    class Estado(models.TextChoices):
+        SOLICITADA = 'solicitada', 'Solicitada'
+        TRAMITE = 'en_tramite', 'En trámite'
+        APROBADA = 'aprobada', 'Aprobada'
+        RECHAZADA = 'rechazada', 'Rechazada'
+        REPUESTA = 'repuesta', 'Repuesta'
 
-        class Meta:
-            ordering = ['-fecha_solicitud']
+    detalle_factura = models.ForeignKey(
+        DetalleFactura, on_delete=models.PROTECT, related_name='garantias'
+    )
+    descripcion = models.TextField(max_length=1000)
+    estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.SOLICITADA)
+    usuario_vendedor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='garantias_solicitadas'
+    )
+    usuario_gerente = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='garantias_decididas',
+    )
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_decision = models.DateTimeField(null=True, blank=True)
+    fecha_reposicion = models.DateTimeField(null=True, blank=True)
 
-        def __str__(self):
-            return f'Garantía {self.numero}'
+    class Meta:
+        ordering = ['-fecha_solicitud']
+        permissions = [
+            ('seguimiento_garantia', 'Actualizar el estado de las garantías'),
+            ('aprobar_garantia', 'Aprobar o rechazar garantías'),
+        ]
 
-        @property
-        def numero(self):
-            return f'G-{self.pk:04d}'
+    def __str__(self):
+        return f'Garantía {self.numero}'
+
+    @property
+    def numero(self):
+        return f'G-{self.pk:04d}'
+
+    @property
+    def clase(self):
+        return {
+            'solicitada': 'pill-off',
+            'en_tramite': 'pill-warn',
+            'aprobada': 'pill-ok',
+            'rechazada': 'pill-error',
+            'repuesta': 'pill-ok',
+        }.get(self.estado, 'pill-off')
+
+
+class SeguimientoGarantia(models.Model):              # SEGUIMIENTO_GARANTIA
+    garantia = models.ForeignKey(Garantia, on_delete=models.CASCADE, related_name='seguimientos')
+    usuario_auxiliar = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='seguimientos_garantia'
+    )
+    estado = models.CharField(max_length=12, choices=Garantia.Estado.choices)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha']
