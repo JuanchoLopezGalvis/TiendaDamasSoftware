@@ -67,21 +67,41 @@
 
 
             <p class="menu-grupo">Facturación</p>
+
+
+            {% if perms.facturacion.add_factura %}
             <a class="value {% if request.resolver_match.url_name == 'nueva_factura' %}active{% endif %}"
                href="{% url 'nueva_factura' %}">Nueva factura</a>
+            {% endif %}
+
+            {% if perms.facturacion.view_factura %}
             <a class="value {% if request.resolver_match.url_name == 'consulta_facturas' %}active{% endif %}"
                href="{% url 'consulta_facturas' %}">Consulta de facturas</a>
+            {% endif %}
+
+            {% if perms.facturacion.view_factura %}
             <a class="value {% if request.resolver_match.url_name == 'reporte_ventas' %}active{% endif %}"
                href="{% url 'reporte_ventas' %}">Reporte de ventas</a>
+            {% endif %}
 
+
+            {% if perms.facturacion.add_devolucion %}
             <a class="value {% if request.resolver_match.url_name == 'registrar_devolucion' %}active{% endif %}"
                href="{% url 'registrar_devolucion' %}">Registrar devolución</a>
+            {% endif %}
 
+
+            {% if perms.facturacion.add_garantia %}
             <a class="value {% if request.resolver_match.url_name == 'solicitud_garantia' %}active{% endif %}"
                href="{% url 'solicitud_garantia' %}">Solicitud de garantía</a>
+            {% endif %}
 
+
+            {% if perms.facturacion.view_devolucion %}
             <a class="value {% if request.resolver_match.url_name == 'reporte_dg' %}active{% endif %}"
                href="{% url 'reporte_dg' %}">Reporte de devoluciones y garantías</a>
+            {% endif %}
+
 
         </nav>
 

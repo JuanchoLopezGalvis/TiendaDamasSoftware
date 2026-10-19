@@ -409,7 +409,9 @@ def _problemas_garantia(factura):
 
 
 @login_required
+@permission_required('facturacion.add_garantia', raise_exception=True)
 def solicitud_garantia(request):
+
     u = request.user
     puede_crear = u.has_perm('facturacion.add_garantia')
     puede_tramitar = u.has_perm('facturacion.seguimiento_garantia')
