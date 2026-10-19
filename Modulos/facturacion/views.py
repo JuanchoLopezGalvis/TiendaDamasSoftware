@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db import transaction
 from django.db.models import Count,F, Q, Sum
 from django.shortcuts import redirect, render
@@ -43,6 +43,7 @@ def _entero(texto, minimo=1, maximo=10**9):
     return n if minimo <= n <= maximo else None
 
 @login_required
+@permission_required('facturacion.view_factura', raise_exception=True)
 def consulta_facturas(request):
     facturas = Factura.objects.select_related('cliente')
 
@@ -84,6 +85,7 @@ def consulta_facturas(request):
     })
 
 @login_required
+@permission_required('facturacion.add_factura', raise_exception=True)
 def nueva_factura(request):
     url = reverse('nueva_factura')
     hoy = timezone.localdate()
@@ -181,6 +183,7 @@ def _rango(periodo):
 
 
 @login_required
+@permission_required('facturacion.view_factura', raise_exception=True)
 def reporte_ventas(request):
     periodo = request.GET.get('periodo', 'mes')
     if periodo not in dict(PERIODOS):
@@ -303,6 +306,7 @@ def _problemas_devolucion(factura, lineas):
 
 
 @login_required
+@permission_required('facturacion.add_devolucion', raise_exception=True)
 def registrar_devolucion(request):
     url = reverse('registrar_devolucion')
     datos = request.POST if request.method == 'POST' else request.GET
@@ -529,6 +533,7 @@ def solicitud_garantia(request):
 
 
 @login_required
+@permission_required('facturacion.view_devolucion', raise_exception=True)
 def reporte_dg(request):
     periodo = request.GET.get('periodo', 'mes')
     if periodo not in dict(PERIODOS):
