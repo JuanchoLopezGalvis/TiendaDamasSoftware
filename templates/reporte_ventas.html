@@ -10,43 +10,43 @@
 
     <section class="card">
 
-        <div class="filtros">
+        <form method="get" class="filtros">
             <div class="campo">
                 <label for="periodo">Periodo</label>
-                <select id="periodo">
-                    <option>Hoy</option>
-                    <option>Últimos 7 días</option>
-                    <option selected>Este mes</option>
-                    <option>Mes anterior</option>
-                    <option>Este año</option>
+                <select id="periodo" name="periodo">
+                    {% for valor, etiqueta in periodos %}
+                        <option value="{{ valor }}" {% if periodo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="campo">
                 <label for="vendedor">Vendedor</label>
-                <select id="vendedor">
-                    <option>Todos</option>
-                    <option>Francisco</option>
-                    <option>Jhonatan</option>
+                <select id="vendedor" name="vendedor">
+                    <option value="">Todos</option>
+                    {% for v in vendedores %}
+                        <option value="{{ v.id }}" {% if vendedor == v.id|stringformat:"s" %}selected{% endif %}>{{ v.nombre }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="campo">
                 <label for="producto">Producto</label>
-                <select id="producto" style="max-width: 260px;">
-                    <option>Todos</option>
-                    <option>101BLU · Blusa manga larga básica</option>
-                    <option>121VES · Vestido midi floral</option>
+                <select id="producto" name="producto" style="max-width: 260px;">
+                    <option value="">Todos</option>
+                    {% for p in productos %}
+                        <option value="{{ p.id }}" {% if producto == p.id|stringformat:"s" %}selected{% endif %}>{{ p.codigo }} · {{ p.nombre_producto }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
-            <button type="button" class="btn-secundario">Generar</button>
-        </div>
+            <button type="submit" class="btn-secundario">Generar</button>
+        </form>
 
         <div class="fila-campos">
-            <div class="aviso" style="flex: 1; margin: 0;">Total vendido: <strong>$5.100.000</strong></div>
-            <div class="aviso" style="flex: 1; margin: 0;">N.º de ventas: <strong>55</strong></div>
-            <div class="aviso" style="flex: 1; margin: 0;">Venta promedio: <strong>$92.727</strong></div>
+            <div class="aviso" style="flex: 1; margin: 0;">Total vendido: <strong>{{ total }}</strong></div>
+            <div class="aviso" style="flex: 1; margin: 0;">N.º de ventas: <strong>{{ ventas }}</strong></div>
+            <div class="aviso" style="flex: 1; margin: 0;">Venta promedio: <strong>{{ promedio }}</strong></div>
         </div>
 
         <div class="roles-grid">
@@ -57,49 +57,49 @@
                         <tr>
                             <th>Vendedor</th>
                             <th style="text-align: right;">N.º ventas</th>
-                            <th style="text-align: right;">Total</th>
+                            <th style="text-align: right; display: table-cell;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
+                        {% for v in por_vendedor %}
                         <tr>
-                            <td>Francisco</td>
-                            <td style="text-align: right;">34</td>
-                            <td style="text-align: right;">$3.120.000</td>
+                            <td>{{ v.nombre }}</td>
+                            <td style="text-align: right;">{{ v.ventas }}</td>
+                            <td style="text-align: right; display: table-cell;">{{ v.total }}</td>
                         </tr>
+                        {% empty %}
                         <tr>
-                            <td>Jhonatan</td>
-                            <td style="text-align: right;">21</td>
-                            <td style="text-align: right;">$1.980.000</td>
+                            <td colspan="3">No hay ventas con estos filtros.</td>
                         </tr>
+                        {% endfor %}
+                        {% if por_vendedor|length > 1 %}
                         <tr>
                             <td><strong>Total</strong></td>
-                            <td style="text-align: right;"><strong>55</strong></td>
-                            <td style="text-align: right;"><strong>$5.100.000</strong></td>
+                            <td style="text-align: right;"><strong>{{ ventas }}</strong></td>
+                            <td style="text-align: right; display: table-cell;"><strong>{{ total }}</strong></td>
                         </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
 
             <div>
                 <h2 class="card-titulo">Ventas por periodo</h2>
-                <div style="display: flex; align-items: flex-end; gap: 6px; height: 180px; border-bottom: 2px solid var(--border);">
-                    <div style="flex: 1; height: 30%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="01/10: $300.000"></div>
-                    <div style="flex: 1; height: 55%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="02/10: $550.000"></div>
-                    <div style="flex: 1; height: 42%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="03/10: $420.000"></div>
-                    <div style="flex: 1; height: 80%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="04/10: $800.000"></div>
-                    <div style="flex: 1; height: 65%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="05/10: $650.000"></div>
-                    <div style="flex: 1; height: 100%; background: var(--primary); border-radius: 3px 3px 0 0;" title="06/10: $1.000.000"></div>
-                    <div style="flex: 1; height: 48%;  background: var(--primary); border-radius: 3px 3px 0 0;" title="07/10: $480.000"></div>
-                </div>
-                <div style="display: flex; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 4px;">
-                    <span style="flex: 1; text-align: center;">01/10</span>
-                    <span style="flex: 1; text-align: center;">02/10</span>
-                    <span style="flex: 1; text-align: center;">03/10</span>
-                    <span style="flex: 1; text-align: center;">04/10</span>
-                    <span style="flex: 1; text-align: center;">05/10</span>
-                    <span style="flex: 1; text-align: center;">06/10</span>
-                    <span style="flex: 1; text-align: center;">07/10</span>
-                </div>
+                {% if barras %}
+                    <div style="display: flex; align-items: flex-end; gap: 3px; height: 180px; border-bottom: 2px solid var(--border);">
+                        {% for b in barras %}
+                            <div style="flex: 1; min-width: 4px; height: {{ b.alto }}%; background: var(--primary); border-radius: 3px 3px 0 0;"
+                                 title="{{ b.etiqueta }}: {{ b.texto }}"></div>
+                        {% endfor %}
+                    </div>
+                    <div style="display: flex; gap: 3px; font-size: 12px; color: var(--muted); margin-top: 4px;">
+                        {% for b in barras %}
+                            <span style="flex: 1; min-width: 4px; text-align: center; white-space: nowrap;">{% if b.mostrar %}{{ b.etiqueta }}{% endif %}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="nota">Sin datos para graficar.</p>
+                {% endif %}
             </div>
 
         </div>

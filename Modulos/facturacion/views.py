@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import F, Q, Sum
+from django.db.models import Count,F, Q, Sum
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-
+from datetime import date, timedelta
+from django.contrib.auth import get_user_model
 
 from Modulos.usuarios.auditoria import registrar
 from Modulos.usuarios.models import Auditoria
@@ -149,9 +150,118 @@ def nueva_factura(request):
         ),
         'hoy': hoy.isoformat(),
     })
+PERIODOS = [
+    ('hoy', 'Hoy'),
+    ('7dias', 'Últimos 7 días'),
+    ('mes', 'Este mes'),
+    ('mes_anterior', 'Mes anterior'),
+    ('anio', 'Este año'),
+    ('todo', 'Todo el historial'),
+]
+
+
+def _rango(periodo):
+    """Devuelve (desde, hasta) para el periodo elegido; None = sin límite."""
+    hoy = timezone.localdate()
+    if periodo == 'hoy':
+        return hoy, hoy
+    if periodo == '7dias':
+        return hoy - timedelta(days=6), hoy
+    if periodo == 'mes_anterior':
+        hasta = hoy.replace(day=1) - timedelta(days=1)
+        return hasta.replace(day=1), hasta
+    if periodo == 'anio':
+        return date(hoy.year, 1, 1), hoy
+    if periodo == 'todo':
+        return None, None
+    return hoy.replace(day=1), hoy          # 'mes'
+
+
 @login_required
 def reporte_ventas(request):
-    return render(request, 'reporte_ventas.html')
+    periodo = request.GET.get('periodo', 'mes')
+    if periodo not in dict(PERIODOS):
+        periodo = 'mes'
+    vendedor = request.GET.get('vendedor', '')
+    producto = request.GET.get('producto', '')
+    desde, hasta = _rango(periodo)
+
+    # Se trabaja sobre las líneas de factura: así el filtro por producto
+    # suma solo lo vendido de ese producto. Las facturas anuladas no cuentan.
+    lineas = DetalleFactura.objects.exclude(factura__estado=Factura.Estado.ANULADA)
+    if desde:
+        lineas = lineas.filter(factura__fecha_factura__gte=desde)
+    if hasta:
+        lineas = lineas.filter(factura__fecha_factura__lte=hasta)
+    if _entero(vendedor):
+        lineas = lineas.filter(factura__usuario_id=int(vendedor))
+    if _entero(producto):
+        lineas = lineas.filter(producto_id=int(producto))
+
+    # --- Totales ---
+    resumen = lineas.aggregate(total=Sum('precio_acumulado'), ventas=Count('factura', distinct=True))
+    total = resumen['total'] or 0
+    ventas = resumen['ventas'] or 0
+
+    # --- Tabla por vendedor ---
+    filas = (
+        lineas.values('factura__usuario__username', 'factura__usuario__empleado__nombre_completo')
+        .annotate(ventas=Count('factura', distinct=True), total=Sum('precio_acumulado'))
+        .order_by('-total')
+    )
+    por_vendedor = [{
+        'nombre': f['factura__usuario__empleado__nombre_completo'] or f['factura__usuario__username'],
+        'ventas': f['ventas'],
+        'total': _cop(f['total'] or 0),
+    } for f in filas]
+
+    # --- Gráfico: una barra por día (por mes si el rango pasa de ~3 meses) ---
+    por_dia = {
+        r['factura__fecha_factura']: r['total'] or 0
+        for r in lineas.values('factura__fecha_factura').annotate(total=Sum('precio_acumulado'))
+    }
+    barras = []
+    if por_dia:
+        ini = desde or min(por_dia)
+        fin = hasta or max(por_dia)
+        if (fin - ini).days > 92:
+            meses = {}
+            for d, t in por_dia.items():
+                meses[(d.year, d.month)] = meses.get((d.year, d.month), 0) + t
+            serie = [(f'{m:02d}/{a}', t) for (a, m), t in sorted(meses.items())]
+        else:
+            serie, d = [], ini
+            while d <= fin:
+                serie.append((d.strftime('%d/%m'), por_dia.get(d, 0)))
+                d += timedelta(days=1)
+
+        maximo = max(t for _, t in serie) or 1
+        paso = max(1, -(-len(serie) // 12))          # máximo ~12 etiquetas visibles
+        barras = [{
+            'etiqueta': e,
+            'texto': _cop(t),
+            'alto': max(3, round(t * 100 / maximo)) if t else 0,
+            'mostrar': i % paso == 0,
+        } for i, (e, t) in enumerate(serie)]
+
+    # --- Listas de los filtros ---
+    vendedores = [
+        {'id': u.pk, 'nombre': u.empleado.nombre_completo if u.empleado else u.get_username()}
+        for u in get_user_model().objects.filter(facturas__isnull=False)
+        .select_related('empleado').distinct().order_by('username')
+    ]
+
+    return render(request, 'reporte_ventas.html', {
+        'periodos': PERIODOS, 'periodo': periodo,
+        'vendedor': vendedor, 'producto': producto,
+        'vendedores': vendedores,
+        'productos': Producto.objects.all(),
+        'por_vendedor': por_vendedor,
+        'barras': barras,
+        'total': _cop(total),
+        'ventas': ventas,
+        'promedio': _cop(total // ventas if ventas else 0),
+    })
 
 
 def _buscar_factura(texto):
