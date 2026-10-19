@@ -8,66 +8,77 @@
     <h1 class="pagina-titulo">Solicitud de garantía</h1>
     <p class="pagina-sub">Creación, seguimiento y aprobación de garantías</p>
 
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
     <div class="roles-grid">
 
         <!-- ========== Nueva solicitud (vendedor) ========== -->
+        {% if puede_crear %}
         <section class="card">
             <h2 class="card-titulo">Nueva solicitud</h2>
 
-            <div class="buscar-producto" style="margin-bottom: 18px;">
+            <form method="get" class="buscar-producto" style="margin-bottom: 18px;">
                 <div class="campo">
                     <label for="factura">N.º de factura</label>
-                    <input type="text" id="factura" value="0001245" autocomplete="off">
+                    <input type="text" id="factura" name="factura" value="{{ texto }}" autocomplete="off" required>
                 </div>
-                <button type="button" class="btn-secundario">Buscar</button>
-            </div>
-
-            <div class="aviso">Factura 0001245 - María Gómez - 20/09/2026</div>
-
-            <form method="post">
-                {% csrf_token %}
-
-                <div style="display: flex; flex-direction: column; gap: 14px;">
-                    <div class="campo">
-                        <label for="detalle">Producto</label>
-                        <select id="detalle" required>
-                            <option value="" selected disabled>Seleccionar producto…</option>
-                            <option>101BLU · Blusa manga larga básica</option>
-                            <option>201BOL · Bolso de mano cuero sintético</option>
-                        </select>
-                    </div>
-
-                    <div class="campo">
-                        <label for="motivo">Tipo de falla</label>
-                        <select id="motivo" required>
-                            <option value="" selected disabled>Seleccionar tipo de falla</option>
-                            <option>Defecto de fabricación</option>
-                            <option>Costura o cierre dañado</option>
-                            <option>Material deteriorado</option>
-                            <option>Otro</option>
-                        </select>
-                    </div>
-
-                    <div class="campo">
-                        <label for="descripcion">Descripción de la falla</label>
-                        <textarea id="descripcion" class="input-tabla" maxlength="1000" required
-                                  style="width: 100%; height: 90px; padding: 8px 10px; font-family: inherit; resize: vertical;"></textarea>
-                    </div>
-                </div>
-
-                <div class="aviso" style="margin-top: 18px;">
-                    La garantía se puede solicitar hasta 90 días después de la compra.
-                </div>
-
-                <div class="acciones">
-                    <button type="submit" class="btn-primario">Crear solicitud</button>
-                    <button type="reset" class="btn-secundario">Cancelar</button>
-                </div>
+                <button type="submit" class="btn-secundario">Buscar</button>
             </form>
+
+            {% if factura %}
+                <div class="aviso">
+                    Factura {{ factura.numero }} - {{ factura.cliente.nombre_completo }} - {{ factura.fecha_factura|date:"d/m/Y" }}
+                </div>
+
+                {% for p in problemas %}
+                    <div class="aviso aviso-warn">{{ p }}</div>
+                {% endfor %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="crear">
+                    <input type="hidden" name="factura" value="{{ factura.numero }}">
+
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        <div class="campo">
+                            <label for="detalle">Producto</label>
+                            <select id="detalle" name="detalle" required {% if problemas %}disabled{% endif %}>
+                                <option value="" selected disabled>Seleccionar producto…</option>
+                                {% for d in detalles %}
+                                    <option value="{{ d.pk }}">{{ d.producto.codigo }} · {{ d.producto.nombre_producto }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="campo">
+                            <label for="descripcion">Descripción de la falla</label>
+                            <textarea id="descripcion" name="descripcion" class="input-tabla" maxlength="1000" required
+                                      {% if problemas %}disabled{% endif %}
+                                      style="width: 100%; height: 90px; padding: 8px 10px; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="aviso" style="margin-top: 18px;">
+                        La garantía se puede solicitar hasta {{ plazo }} días después de la compra.
+                    </div>
+
+                    <div class="acciones">
+                        <button type="submit" class="btn-primario" {% if problemas %}disabled{% endif %}>Crear solicitud</button>
+                        <a class="btn-secundario btn-enlace" href="{% url 'solicitud_garantia' %}">Cancelar</a>
+                    </div>
+                </form>
+            {% else %}
+                <p class="nota">Busca la factura para elegir el producto.</p>
+            {% endif %}
         </section>
+        {% endif %}
 
         <!-- ========== Solicitudes (auxiliar / gerente) ========== -->
-        <section class="card">
+        <section class="card" {% if not puede_crear %}style="grid-column: 1 / -1;"{% endif %}>
             <h2 class="card-titulo">Solicitudes de garantía</h2>
 
             <table class="tabla sin-derecha">
@@ -80,44 +91,46 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% for f in filas %}
                     <tr>
-                        <td>G-0012</td>
-                        <td>Bolso de mano<br><small style="color: var(--muted);">Costura o cierre dañado</small></td>
                         <td>
-                            <input type="text" class="input-tabla" placeholder="Comentario" style="width: 100%; margin-bottom: 6px;">
-                            <button type="button" class="btn-secundario btn-chico">En trámite</button>
-                            <button type="button" class="btn-primario btn-chico">Aprobar</button>
-                            <button type="button" class="btn-secundario btn-chico">Rechazar</button>
+                            {{ f.g.numero }}<br>
+                            <small style="color: var(--muted);">Fact. {{ f.g.detalle_factura.factura.numero }} · {{ f.g.fecha_solicitud|date:"d/m/Y" }}</small>
                         </td>
-                        <td><span class="pill pill-off">Recibida</span></td>
-                    </tr>
-                    <tr>
-                        <td>G-0011</td>
-                        <td>Chaqueta denim<br><small style="color: var(--muted);">Defecto de fabricación</small></td>
                         <td>
-                            <input type="text" class="input-tabla" placeholder="Comentario" style="width: 100%; margin-bottom: 6px;">
-                            <button type="button" class="btn-primario btn-chico">Aprobar</button>
-                            <button type="button" class="btn-secundario btn-chico">Rechazar</button>
+                            {{ f.g.detalle_factura.producto.nombre_producto }}<br>
+                            <small style="color: var(--muted);">{{ f.g.descripcion|truncatechars:70 }}</small>
                         </td>
-                        <td><span class="pill pill-warn">En trámite</span></td>
+                        <td>
+                            {% if f.tramitar or f.reponer or f.decidir %}
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="garantia" value="{{ f.g.pk }}">
+                                {% if f.tramitar %}
+                                    <button type="submit" name="accion" value="tramite" class="btn-secundario btn-chico">En trámite</button>
+                                {% endif %}
+                                {% if f.reponer %}
+                                    <button type="submit" name="accion" value="repuesta" class="btn-secundario btn-chico">Marcar repuesta</button>
+                                {% endif %}
+                                {% if f.decidir %}
+                                    <button type="submit" name="accion" value="aprobar" class="btn-primario btn-chico">Aprobar</button>
+                                    <button type="submit" name="accion" value="rechazar" class="btn-secundario btn-chico">Rechazar</button>
+                                {% endif %}
+                            </form>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td><span class="pill {{ f.g.clase }}">{{ f.g.get_estado_display }}</span></td>
                     </tr>
+                    {% empty %}
                     <tr>
-                        <td>G-0010</td>
-                        <td>Zapatos tacón<br><small style="color: var(--muted);">Material deteriorado</small></td>
-                        <td>—</td>
-                        <td><span class="pill pill-ok">Aprobada</span></td>
+                        <td colspan="4">Aún no hay solicitudes de garantía.</td>
                     </tr>
-                    <tr>
-                        <td>G-0009</td>
-                        <td>Blusa de gasa<br><small style="color: var(--muted);">Otro</small></td>
-                        <td>—</td>
-                        <td><span class="pill pill-error">Rechazada</span></td>
-                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
 
             <div class="aviso aviso-warn">
-                La auxiliar actualiza el estado; el gerente aprueba o rechaza (el rechazo exige un comentario).
+                El vendedor crea la solicitud; la auxiliar actualiza el estado; el gerente aprueba o rechaza.
             </div>
         </section>
 

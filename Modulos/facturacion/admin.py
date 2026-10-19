@@ -1,7 +1,10 @@
 from django.contrib import admin
 
-from Modulos.facturacion.models import Cliente, DetalleFactura, Factura, Producto
-from Modulos.facturacion.models import Devolucion, DetalleDevolucion
+from Modulos.facturacion.models import (
+    Cliente, DetalleDevolucion, DetalleFactura, Devolucion, Factura,
+    Garantia, Producto, SeguimientoGarantia,
+)
+
 
 
 class DetalleInline(admin.TabularInline):
@@ -26,6 +29,8 @@ class ProductoAdmin(admin.ModelAdmin):
 
 admin.site.register(Cliente)
 
+
+
 class LineaDevolucionInline(admin.TabularInline):
     model = DetalleDevolucion
     extra = 0
@@ -38,3 +43,19 @@ class DevolucionAdmin(admin.ModelAdmin):
     list_display = ('numero', 'factura', 'motivo', 'tipo_resolucion', 'usuario', 'fecha_devolucion')
     list_filter = ('motivo', 'tipo_resolucion')
     inlines = [LineaDevolucionInline]
+
+
+
+class SeguimientoInline(admin.TabularInline):
+    model = SeguimientoGarantia
+    extra = 0
+    can_delete = False
+    readonly_fields = ('usuario_auxiliar', 'estado', 'fecha')
+
+
+@admin.register(Garantia)
+class GarantiaAdmin(admin.ModelAdmin):
+    list_display = ('numero', 'detalle_factura', 'estado', 'usuario_vendedor',
+                    'usuario_gerente', 'fecha_solicitud')
+    list_filter = ('estado',)
+    inlines = [SeguimientoInline]
