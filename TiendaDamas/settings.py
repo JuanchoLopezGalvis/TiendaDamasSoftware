@@ -136,9 +136,7 @@ EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
 DEFAULT_FROM_EMAIL = 'TiendaDamas <tiendadamas56@gmail.com>'
 
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'panel'
-LOGOUT_REDIRECT_URL = 'login'
+
 
 # Configuración privada de cada equipo (no se sube a GitHub)
 try:
@@ -146,12 +144,18 @@ try:
 except ImportError:
     pass
 
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'perfil'
+LOGOUT_REDIRECT_URL = 'login'
 
+# Configuración privada de cada equipo (no se sube a GitHub).
+# Debe ir al FINAL para poder sobrescribir lo anterior.
+try:
+    from .local_settings import *  # noqa
+except ImportError:
+    pass
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_COOKIE_AGE = 15 * 60          # 15 minutos de inactividad
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 DEFAULT_FROM_EMAIL = 'tiendadamas56@gmail.com'
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'panel'
-LOGOUT_REDIRECT_URL = 'login'
