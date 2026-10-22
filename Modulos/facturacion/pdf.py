@@ -14,7 +14,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 __all__ = ['cm', 'Spacer', 'tabla', 'grafico_barras', 'parrafo', 'celda', 'reporte']
 
-AZUL = colors.HexColor('#3b4a8c')
+VERDE = colors.HexColor('#2e7d4f')
 GRIS = colors.HexColor('#6b6b72')
 FONDO = colors.HexColor('#f1f1f4')
 LINEA = colors.HexColor('#d9d9de')
@@ -22,23 +22,23 @@ LINEA = colors.HexColor('#d9d9de')
 
 def _estilos():
     e = getSampleStyleSheet()
-    e['Title'].textColor = AZUL
+    e['Title'].textColor = VERDE
     e['Title'].alignment = 0          # izquierda
     e['Normal'].fontSize = 10
-    e['Heading2'].textColor = AZUL
+    e['Heading2'].textColor = VERDE
     e['Heading2'].fontSize = 13
     return e
 
 
 def tabla(encabezados, filas, derecha=(), total=None, anchos=None):
-    """Tabla con encabezado azul y filas alternas. `derecha`: índices de columnas numéricas."""
+    """Tabla con encabezado verde y filas alternas. `derecha`: índices de columnas numéricas."""
     # Los Paragraph se dejan tal cual para que el texto largo haga salto de línea
     datos = [encabezados] + [[c if isinstance(c, Paragraph) else str(c) for c in f] for f in filas]
     if total:
         datos.append([str(c) for c in total])
     t = Table(datos, colWidths=anchos, repeatRows=1)
     estilo = [
-        ('BACKGROUND', (0, 0), (-1, 0), AZUL),
+        ('BACKGROUND', (0, 0), (-1, 0), VERDE),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
@@ -53,7 +53,7 @@ def tabla(encabezados, filas, derecha=(), total=None, anchos=None):
     if total:
         estilo += [
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('LINEABOVE', (0, -1), (-1, -1), 1, AZUL),
+            ('LINEABOVE', (0, -1), (-1, -1), 1, VERDE),
         ]
     t.setStyle(TableStyle(estilo))
     return t
@@ -65,7 +65,7 @@ def grafico_barras(etiquetas, valores, ancho=17 * cm, alto=6 * cm):
     g.x, g.y = 45, 25
     g.width, g.height = min(ancho - 60, 40 + 35 * len(valores)), alto - 40
     g.data = [valores]
-    g.bars[0].fillColor = AZUL
+    g.bars[0].fillColor = VERDE
     g.bars[0].strokeColor = None
     g.valueAxis.valueMin = 0
     g.valueAxis.labels.fontSize = 7
