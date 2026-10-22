@@ -9,6 +9,8 @@ from django.utils.dateparse import parse_date
 from datetime import date, timedelta
 from django.contrib.auth import get_user_model
 from collections import Counter
+import re
+from urllib.parse import urlencode
 
 from Modulos.usuarios.auditoria import registrar
 from Modulos.usuarios.models import Auditoria
@@ -16,12 +18,16 @@ from django.db.models.functions import Coalesce
 
 from django.core.exceptions import PermissionDenied
 
+from Modulos.facturacion import pdf
 from Modulos.facturacion.models import (
     PLAZO_DEVOLUCION_DIAS, PLAZO_GARANTIA_DIAS, Cliente, DetalleDevolucion,
     DetalleFactura, Devolucion, Factura, Garantia, Producto, SeguimientoGarantia,
 )
 
 # Create your views here.
+
+CODIGO_PRODUCTO = re.compile(r'^[0-9]{3}[A-Z]{3}$')
+STOCK_BAJO = 5      # desde aquí se avisa que quedan pocas unidades
 
 def _cop(n):
     """1234567 -> $1.234.567"""
@@ -50,7 +56,6 @@ def consulta_facturas(request):
     numero = request.GET.get('numero', '').strip()
     cliente = request.GET.get('cliente', '').strip()
     fecha = request.GET.get('fecha', '').strip()
-    estado = request.GET.get('estado', '')
 
     if numero:
         # Acepta "0001245" o "1245"
@@ -63,13 +68,11 @@ def consulta_facturas(request):
             facturas = facturas.filter(
                 Q(cliente__nombres__icontains=palabra)
                 | Q(cliente__apellidos__icontains=palabra)
+                | Q(cliente__documento__icontains=palabra)
             )
 
     if fecha and _fecha(fecha):
         facturas = facturas.filter(fecha_factura=_fecha(fecha))
-
-    if estado in Factura.Estado.values:
-        facturas = facturas.filter(estado=estado)
 
     return render(request, 'consulta_factura.html', {
         'facturas': [{
@@ -77,11 +80,8 @@ def consulta_facturas(request):
             'cliente': f.cliente.nombre_completo,
             'fecha': f.fecha_factura.strftime('%d/%m/%Y'),
             'total': _cop(f.total),
-            'estado': f.get_estado_display(),
-            'clase': f.clase,
         } for f in facturas[:200]],
-        'estados': Factura.Estado.choices,
-        'f': {'numero': numero, 'cliente': cliente, 'fecha': fecha, 'estado': estado},
+        'f': {'numero': numero, 'cliente': cliente, 'fecha': fecha},
     })
 
 @login_required
@@ -92,13 +92,12 @@ def nueva_factura(request):
     productos = Producto.objects.filter(activo=True)
 
     if request.method == 'POST':
-        nombres = ' '.join(request.POST.get('nombres', '').split())[:100]
-        apellidos = ' '.join(request.POST.get('apellidos', '').split())[:100]
+        cliente = Cliente.objects.filter(pk=request.POST.get('cliente', '').strip()).first()
         fecha = _fecha(request.POST.get('fecha'))
         errores = []
 
-        if not nombres or not apellidos:
-            errores.append('Escribe los nombres y apellidos del cliente.')
+        if cliente is None:
+            errores.append('Selecciona el cliente (si no existe, créalo primero).')
         if fecha is None or fecha > hoy:
             errores.append('La fecha no es válida (no puede ser futura).')
 
@@ -113,34 +112,44 @@ def nueva_factura(request):
         if not pedido and not errores:
             errores.append('Agrega al menos un producto.')
 
-        # El precio se toma SIEMPRE de la base de datos, nunca del navegador
-        encontrados = {p.pk: p for p in productos.filter(pk__in=pedido)}
-        if pedido and len(encontrados) != len(pedido):
-            errores.append('Alguno de los productos ya no está disponible.')
-
         if errores:
             for e in errores:
                 messages.error(request, e)
             return redirect(url)
 
         with transaction.atomic():
-            cliente = (
-                Cliente.objects.filter(nombres__iexact=nombres, apellidos__iexact=apellidos).first()
-                or Cliente.objects.create(nombres=nombres, apellidos=apellidos)
-            )
-            factura = Factura.objects.create(
-                fecha_factura=fecha, cliente=cliente, usuario=request.user)
-
-            total = 0
+            # Se bloquean las filas para que dos ventas a la vez no descuenten el mismo stock.
+            # El precio se toma SIEMPRE de la base de datos, nunca del navegador.
+            encontrados = {p.pk: p for p in productos.select_for_update().filter(pk__in=pedido)}
+            if len(encontrados) != len(pedido):
+                errores.append('Alguno de los productos ya no está disponible.')
             for pid, cant in pedido.items():
-                p = encontrados[pid]
-                acumulado = p.precio_venta_unitario * cant
-                DetalleFactura.objects.create(
-                    factura=factura, producto=p, cantidad=cant, precio_acumulado=acumulado)
-                total += acumulado
+                p = encontrados.get(pid)
+                if p and cant > p.stock:
+                    errores.append(
+                        f'No hay suficiente stock de «{p.nombre_producto}»: '
+                        f'quedan {p.stock} y pediste {cant}.')
 
-            factura.total = total
-            factura.save(update_fields=['total'])
+            if not errores:
+                factura = Factura.objects.create(
+                    fecha_factura=fecha, cliente=cliente, usuario=request.user)
+
+                total = 0
+                for pid, cant in pedido.items():
+                    p = encontrados[pid]
+                    acumulado = p.precio_venta_unitario * cant
+                    DetalleFactura.objects.create(
+                        factura=factura, producto=p, cantidad=cant, precio_acumulado=acumulado)
+                    Producto.objects.filter(pk=pid).update(stock=F('stock') - cant)
+                    total += acumulado
+
+                factura.total = total
+                factura.save(update_fields=['total'])
+
+        if errores:
+            for e in errores:
+                messages.error(request, e)
+            return redirect(url)
 
         registrar(request, Auditoria.Evento.CREACION,
                   f'Factura {factura.numero} de {cliente.nombre_completo} por {_cop(total)}')
@@ -151,10 +160,150 @@ def nueva_factura(request):
         # Se renombran las claves para que el HTML y el JS sigan funcionando igual
         'productos': list(
             productos.annotate(nombre=F('nombre_producto'), precio=F('precio_venta_unitario'))
-            .values('id', 'codigo', 'nombre', 'precio')
+            .values('id', 'codigo', 'nombre', 'precio', 'stock')
         ),
+        'clientes': Cliente.objects.all(),
+        'cliente_nuevo': request.GET.get('cliente', ''),
         'hoy': hoy.isoformat(),
     })
+
+
+def _url_pdf(request):
+    """La misma URL del reporte (con sus filtros) pidiendo el PDF."""
+    q = request.GET.copy()
+    q['formato'] = 'pdf'
+    return '?' + q.urlencode()
+
+
+def _texto(request, campo, largo):
+    """Valor del formulario sin espacios repetidos."""
+    return ' '.join(request.POST.get(campo, '').split())[:largo]
+
+
+@login_required
+@permission_required('facturacion.add_cliente', raise_exception=True)
+def crear_cliente(request):
+    url = reverse('crear_cliente')
+    valores = {}
+
+    if request.method == 'POST':
+        valores = {
+            'nombres': _texto(request, 'nombres', 100),
+            'apellidos': _texto(request, 'apellidos', 100),
+            # Se aceptan puntos, guiones y espacios al escribir (1.012.345), pero se guardan solo los dígitos
+            'documento': re.sub(r'[\s.\-]', '', request.POST.get('documento', ''))[:15],
+            'telefono': re.sub(r'[\s.\-]', '', request.POST.get('telefono', ''))[:15],
+            'correo': _texto(request, 'correo', 100).lower(),
+        }
+        errores = []
+        if not re.fullmatch(r'[0-9]{5,15}', valores['documento']):
+            errores.append('El documento debe tener solo números (entre 5 y 15 dígitos).')
+        elif Cliente.objects.filter(documento=valores['documento']).exists():
+            errores.append(f'Ya existe un cliente con el documento {valores["documento"]}.')
+        if not valores['nombres'] or not valores['apellidos']:
+            errores.append('Escribe los nombres y apellidos del cliente.')
+        if not re.fullmatch(r'[0-9]{7,15}', valores['telefono']):
+            errores.append('El teléfono debe tener solo números (entre 7 y 15 dígitos).')
+        if not valores['correo'] or '@' not in valores['correo']:
+            errores.append('Escribe un correo válido.')
+
+        if not errores:
+            cliente = Cliente.objects.create(
+                nombres=valores['nombres'], apellidos=valores['apellidos'],
+                documento=valores['documento'],
+                telefono=valores['telefono'], correo=valores['correo'])
+            registrar(request, Auditoria.Evento.CREACION, f'Cliente {cliente.nombre_completo}')
+            messages.success(request, f'Cliente {cliente.nombre_completo} creado.')
+            # Si se vino desde la factura, se vuelve a ella con el cliente ya elegido
+            if request.POST.get('volver') == 'factura' and request.user.has_perm('facturacion.add_factura'):
+                return redirect(f'{reverse("nueva_factura")}?{urlencode({"cliente": cliente.pk})}')
+            return redirect(url)
+
+        for e in errores:
+            messages.error(request, e)
+
+    return render(request, 'clientes.html', {
+        'valores': valores,
+        'volver': request.POST.get('volver') or request.GET.get('volver', ''),
+        'clientes': Cliente.objects.all()[:200],
+    })
+
+
+@login_required
+@permission_required('facturacion.add_producto', raise_exception=True)
+def crear_producto(request):
+    url = reverse('crear_producto')
+    valores = {}
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion', 'crear')
+
+        # ---------- Sumar unidades a un producto existente ----------
+        if accion == 'stock':
+            producto = Producto.objects.filter(pk=_entero(request.POST.get('producto'))).first()
+            cant = _entero(request.POST.get('unidades'), 1, 100000)
+            if producto is None or cant is None:
+                messages.error(request, 'Escribe una cantidad válida de unidades a agregar.')
+                return redirect(url)
+            Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cant)
+            producto.refresh_from_db(fields=['stock'])
+            registrar(request, Auditoria.Evento.CREACION,
+                      f'Ingreso de {cant} unidades de {producto.codigo} (stock {producto.stock})')
+            messages.success(
+                request, f'Se agregaron {cant} unidades a {producto.codigo}. Stock actual: {producto.stock}.')
+            return redirect(url)
+
+        # ---------- Crear producto ----------
+        valores = {
+            'codigo': _texto(request, 'codigo', 10).upper().replace(' ', ''),
+            'nombre': _texto(request, 'nombre', 100),
+            'precio': request.POST.get('precio', '').strip(),
+            'stock': request.POST.get('stock', '').strip(),
+        }
+        precio = _entero(valores['precio'], 1)
+        stock = _entero(valores['stock'], 0, 100000)
+        errores = []
+        if not CODIGO_PRODUCTO.match(valores['codigo']):
+            errores.append('El código debe tener 3 números y 3 letras (ej. 301BLU).')
+        elif Producto.objects.filter(codigo=valores['codigo']).exists():
+            errores.append(f'Ya existe un producto con el código {valores["codigo"]}.')
+        if not valores['nombre']:
+            errores.append('Escribe el nombre del producto.')
+        if precio is None:
+            errores.append('El precio debe ser un número entero mayor que 0.')
+        if stock is None:
+            errores.append('La cantidad inicial debe ser un número entero (0 o más).')
+
+        if not errores:
+            producto = Producto.objects.create(
+                codigo=valores['codigo'], nombre_producto=valores['nombre'],
+                precio_venta_unitario=precio, stock=stock)
+            registrar(request, Auditoria.Evento.CREACION,
+                      f'Producto {producto} con {stock} unidades')
+            messages.success(request, f'Producto {producto} creado con {stock} unidades.')
+            return redirect(url)
+
+        for e in errores:
+            messages.error(request, e)
+
+    buscar = request.GET.get('buscar', '').strip()
+    productos = Producto.objects.all()
+    if buscar:
+        productos = productos.filter(
+            Q(codigo__icontains=buscar) | Q(nombre_producto__icontains=buscar))
+
+    return render(request, 'productos.html', {
+        'valores': valores,
+        'buscar': buscar,
+        'productos': [{
+            'p': p,
+            'precio': _cop(p.precio_venta_unitario),
+            'clase': 'pill-error' if p.stock == 0 else 'pill-warn' if p.stock <= STOCK_BAJO else 'pill-ok',
+        } for p in productos[:300]],
+        'stock_bajo': STOCK_BAJO,
+    })
+
+
 PERIODOS = [
     ('hoy', 'Hoy'),
     ('7dias', 'Últimos 7 días'),
@@ -226,7 +375,7 @@ def reporte_ventas(request):
         r['factura__fecha_factura']: r['total'] or 0
         for r in lineas.values('factura__fecha_factura').annotate(total=Sum('precio_acumulado'))
     }
-    barras = []
+    barras, serie = [], []
     if por_dia:
         ini = desde or min(por_dia)
         fin = hasta or max(por_dia)
@@ -257,7 +406,40 @@ def reporte_ventas(request):
         .select_related('empleado').distinct().order_by('username')
     ]
 
+    if request.GET.get('formato') == 'pdf':
+        nombre_vendedor = next((v['nombre'] for v in vendedores if str(v['id']) == vendedor), 'Todos')
+        p = Producto.objects.filter(pk=_entero(producto)).first() if _entero(producto) else None
+        contenido = [
+            pdf.tabla(['Total vendido', 'N.º de ventas', 'Venta promedio'],
+                      [[_cop(total), ventas, _cop(total // ventas if ventas else 0)]],
+                      derecha=(0, 1, 2), anchos=[17 / 3 * pdf.cm] * 3),
+            pdf.parrafo('Ventas por vendedor', 'Heading2'),
+            pdf.tabla(
+                ['Vendedor', 'N.º ventas', 'Total'],
+                [[f['nombre'], f['ventas'], f['total']] for f in por_vendedor]
+                or [['No hay ventas con estos filtros.', '', '']],
+                derecha=(1, 2),
+                total=['Total', ventas, _cop(total)] if len(por_vendedor) > 1 else None,
+                anchos=[9 * pdf.cm, 3.5 * pdf.cm, 4.5 * pdf.cm],
+            ),
+        ]
+        if serie:
+            contenido += [
+                pdf.parrafo('Ventas por periodo', 'Heading2'),
+                pdf.grafico_barras([e for e, _ in serie], [t for _, t in serie]),
+            ]
+        filtros = [('Periodo', dict(PERIODOS)[periodo]), ('Vendedor', nombre_vendedor),
+                   ('Producto', str(p) if p else 'Todos')]
+        registrar(request, Auditoria.Evento.DESCARGA,
+                  'Reporte de ventas en PDF (' + ', '.join(f'{k}: {v}' for k, v in filtros) + ')')
+        return pdf.reporte(
+            'Reporte de ventas', filtros,
+            contenido, request.user,
+            f'reporte_ventas_{timezone.localdate():%Y-%m-%d}.pdf',
+        )
+
     return render(request, 'reporte_ventas.html', {
+        'url_pdf': _url_pdf(request),
         'periodos': PERIODOS, 'periodo': periodo,
         'vendedor': vendedor, 'producto': producto,
         'vendedores': vendedores,
@@ -409,8 +591,9 @@ def _problemas_garantia(factura):
 
 
 @login_required
-@permission_required('facturacion.add_garantia', raise_exception=True)
 def solicitud_garantia(request):
+    # Vendedor crea, auxiliar hace el seguimiento y gerente aprueba o rechaza (RF-FACT-07):
+    # basta con tener cualquiera de los tres permisos para entrar.
 
     u = request.user
     puede_crear = u.has_perm('facturacion.add_garantia')
@@ -489,6 +672,8 @@ def solicitud_garantia(request):
                     garantia.save(update_fields=campos)
                     SeguimientoGarantia.objects.create(
                         garantia=garantia, usuario_auxiliar=u, estado=nuevo)
+                registrar(request, Auditoria.Evento.MODIFICACION,
+                          f'Garantía {garantia.numero} pasó a "{garantia.get_estado_display()}"')
             else:
                 if not puede_decidir:
                     raise PermissionDenied
@@ -499,6 +684,8 @@ def solicitud_garantia(request):
                 garantia.usuario_gerente = u
                 garantia.fecha_decision = timezone.now()
                 garantia.save(update_fields=['estado', 'usuario_gerente', 'fecha_decision'])
+                registrar(request, Auditoria.Evento.MODIFICACION,
+                          f'Garantía {garantia.numero} {garantia.get_estado_display().lower()}')
 
             messages.success(request, f'{garantia.numero}: {garantia.get_estado_display().lower()}.')
             return redirect(url)
@@ -603,13 +790,47 @@ def reporte_dg(request):
     else:
         filas.sort(key=lambda f: (-(f['devoluciones'] + f['garantias']), f['grupo']))
 
+    titulo_grupo = {'producto': 'Producto', 'cliente': 'Clienta', 'mes': 'Mes'}[agrupar]
+    total_dev = sum(f['devoluciones'] for f in filas)
+    total_gar = sum(f['garantias'] for f in filas)
+
+    if request.GET.get('formato') == 'pdf':
+        p = Producto.objects.filter(pk=_entero(producto)).first() if _entero(producto) else None
+        contenido = [
+            pdf.tabla(
+                [titulo_grupo, 'N.º devoluciones', 'N.º garantías', 'Motivo más frecuente'],
+                [[f['grupo'], f['devoluciones'], f['garantias'], f['motivo']] for f in filas]
+                or [['No hay devoluciones ni garantías con estos filtros.', '', '', '']],
+                derecha=(1, 2),
+                total=['Total', total_dev, total_gar, ''] if len(filas) > 1 else None,
+                anchos=[7 * pdf.cm, 3.2 * pdf.cm, 3 * pdf.cm, 3.8 * pdf.cm],
+            ),
+            pdf.Spacer(1, 0.4 * pdf.cm),
+            pdf.parrafo(
+                '<font color="#6b6b72">Cada producto devuelto cuenta como una devolución. '
+                'El motivo es solo de las devoluciones; al filtrar por motivo, '
+                'las garantías no se cuentan.</font>'),
+        ]
+        filtros = [('Periodo', dict(PERIODOS)[periodo]), ('Producto', str(p) if p else 'Todos'),
+                   ('Motivo', dict(Devolucion.Motivo.choices).get(motivo, 'Todos')),
+                   ('Agrupado por', titulo_grupo)]
+        registrar(request, Auditoria.Evento.DESCARGA,
+                  'Reporte de devoluciones y garantías en PDF ('
+                  + ', '.join(f'{k}: {v}' for k, v in filtros) + ')')
+        return pdf.reporte(
+            'Reporte de devoluciones y garantías', filtros,
+            contenido, request.user,
+            f'reporte_devoluciones_garantias_{timezone.localdate():%Y-%m-%d}.pdf',
+        )
+
     return render(request, 'reporte_dg.html', {
+        'url_pdf': _url_pdf(request),
         'periodos': PERIODOS, 'periodo': periodo,
         'producto': producto, 'motivo': motivo, 'agrupar': agrupar,
         'productos': Producto.objects.all(),
         'motivos': Devolucion.Motivo.choices,
         'filas': filas,
-        'total_dev': sum(f['devoluciones'] for f in filas),
-        'total_gar': sum(f['garantias'] for f in filas),
-        'titulo_grupo': {'producto': 'Producto', 'cliente': 'Clienta', 'mes': 'Mes'}[agrupar],
+        'total_dev': total_dev,
+        'total_gar': total_gar,
+        'titulo_grupo': titulo_grupo,
     })

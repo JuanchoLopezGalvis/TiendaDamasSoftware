@@ -1,4 +1,4 @@
-from django.contrib.auth.signals import user_logged_in, user_login_failed
+from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from django.dispatch import receiver
 
 from Modulos.usuarios.auditoria import registrar
@@ -19,3 +19,9 @@ def login_fallido(sender, credentials, request=None, **kwargs):
         'Credenciales incorrectas',
         usuario_texto=nombre or 'Desconocido',
     )
+
+
+@receiver(user_logged_out)
+def cierre_sesion(sender, request, user, **kwargs):
+    if user is not None:
+        registrar(request, Auditoria.Evento.CIERRE_SESION, 'Cerró sesión', usuario=user)

@@ -32,6 +32,7 @@
             </div>
 
             <button type="submit" class="btn-secundario">Filtrar</button>
+            <a class="btn-primario btn-enlace" id="btnPdf" href="{{ url_pdf }}">Descargar PDF</a>
             <a class="btn-secundario" href="{% url 'bitacora_auditoria' %}"
                style="text-decoration: none; display: inline-flex; align-items: center;">Limpiar</a>
         </form>
@@ -68,4 +69,39 @@
 
     </section>
 </div>
+
+<script>
+    // Descarga el PDF y luego recarga la página para que la tabla muestre el registro de la descarga
+    (function () {
+        var btn = document.getElementById('btnPdf');
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (btn.dataset.ocupado) { return; }
+            btn.dataset.ocupado = '1';
+
+            fetch(btn.href, { credentials: 'same-origin' })
+                .then(function (r) {
+                    if (!r.ok) { throw new Error(r.status); }
+                    var cd = r.headers.get('Content-Disposition') || '';
+                    var m = cd.match(/filename="([^"]+)"/);
+                    return r.blob().then(function (b) { return { blob: b, nombre: m ? m[1] : 'bitacora.pdf' }; });
+                })
+                .then(function (d) {
+                    var url = URL.createObjectURL(d.blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = d.nombre;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(function () { URL.revokeObjectURL(url); location.reload(); }, 300);
+                })
+                .catch(function () {
+                    // Si algo falla, se descarga de la forma normal
+                    window.location.href = btn.href;
+                    delete btn.dataset.ocupado;
+                });
+        });
+    })();
+</script>
 {% endblock %}

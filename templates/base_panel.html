@@ -68,6 +68,15 @@
 
             <p class="menu-grupo">Facturación</p>
 
+            {% if perms.facturacion.add_cliente %}
+            <a class="value {% if request.resolver_match.url_name == 'crear_cliente' %}active{% endif %}"
+               href="{% url 'crear_cliente' %}">Clientes</a>
+            {% endif %}
+
+            {% if perms.facturacion.add_producto %}
+            <a class="value {% if request.resolver_match.url_name == 'crear_producto' %}active{% endif %}"
+               href="{% url 'crear_producto' %}">Productos e inventario</a>
+            {% endif %}
 
             {% if perms.facturacion.add_factura %}
             <a class="value {% if request.resolver_match.url_name == 'nueva_factura' %}active{% endif %}"
@@ -91,7 +100,7 @@
             {% endif %}
 
 
-            {% if perms.facturacion.add_garantia %}
+            {% if perms.facturacion.add_garantia or perms.facturacion.seguimiento_garantia or perms.facturacion.aprobar_garantia %}
             <a class="value {% if request.resolver_match.url_name == 'solicitud_garantia' %}active{% endif %}"
                href="{% url 'solicitud_garantia' %}">Solicitud de garantía</a>
             {% endif %}
@@ -153,6 +162,33 @@
                     localStorage.setItem('menuCerrado', body.classList.contains('menu-cerrado') ? '1' : '0');
                 } catch (e) {}
             });
+
+            /* ---- Mensajes de validación del navegador en español ---- */
+            function mensajeValidacion(campo) {
+                var v = campo.validity;
+                if (v.valueMissing) { return 'Completa este campo.'; }
+                if (v.patternMismatch) { return campo.title || 'El formato no es válido.'; }
+                if (v.typeMismatch) {
+                    return campo.type === 'email' ? 'Escribe un correo válido (ej. nombre@correo.com).' : 'El valor no es válido.';
+                }
+                if (v.badInput) { return 'Escribe un número.'; }
+                if (v.rangeUnderflow) { return 'El valor debe ser ' + campo.min + ' o más.'; }
+                if (v.rangeOverflow) { return 'El valor debe ser ' + campo.max + ' o menos.'; }
+                if (v.stepMismatch) { return 'Escribe un número entero.'; }
+                if (v.tooLong) { return 'Máximo ' + campo.maxLength + ' caracteres.'; }
+                if (v.tooShort) { return 'Mínimo ' + campo.minLength + ' caracteres.'; }
+                return '';
+            }
+
+            // "invalid" no burbujea: se escucha en fase de captura para cubrir todos los campos
+            document.addEventListener('invalid', function (e) {
+                e.target.setCustomValidity('');
+                e.target.setCustomValidity(mensajeValidacion(e.target));
+            }, true);
+
+            document.addEventListener('input', function (e) {
+                if (e.target.setCustomValidity) { e.target.setCustomValidity(''); }
+            }, true);
 
             /* ---- Modo claro / oscuro ---- */
             var btnTema = document.getElementById('themeToggle');

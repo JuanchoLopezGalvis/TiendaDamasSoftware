@@ -1,0 +1,88 @@
+{% extends 'base_panel.html' %}
+
+{% block title %}Clientes{% endblock %}
+
+{% block content %}
+<div class="pagina">
+
+    <h1 class="pagina-titulo">Clientes</h1>
+    <p class="pagina-sub">Registra a los clientes para poder facturarles</p>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="msg msg-{{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" class="card">
+        {% csrf_token %}
+        <input type="hidden" name="volver" value="{{ volver }}">
+        <h2 class="card-titulo">Nuevo cliente</h2>
+
+        <div class="fila-campos">
+            <div class="campo">
+                <label for="documento">Documento</label>
+                <input type="text" id="documento" name="documento" maxlength="15"
+                       inputmode="numeric" pattern="[0-9]{5,15}" title="Solo números, entre 5 y 15 dígitos"
+                       value="{{ valores.documento }}" autocomplete="off" required>
+            </div>
+            <div class="campo campo-grande">
+                <label for="nombres">Nombres</label>
+                <input type="text" id="nombres" name="nombres" maxlength="100"
+                       value="{{ valores.nombres }}" autocomplete="off" required>
+            </div>
+            <div class="campo campo-grande">
+                <label for="apellidos">Apellidos</label>
+                <input type="text" id="apellidos" name="apellidos" maxlength="100"
+                       value="{{ valores.apellidos }}" autocomplete="off" required>
+            </div>
+        </div>
+        <div class="fila-campos">
+            <div class="campo">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono" maxlength="15"
+                       inputmode="numeric" pattern="[0-9]{7,15}" title="Solo números, entre 7 y 15 dígitos"
+                       value="{{ valores.telefono }}" autocomplete="off" required>
+            </div>
+            <div class="campo campo-grande">
+                <label for="correo">Correo</label>
+                <input type="email" id="correo" name="correo" maxlength="100"
+                       value="{{ valores.correo }}" autocomplete="off" required>
+            </div>
+        </div>
+
+        <div class="acciones">
+            <button type="submit" class="btn-primario">Crear cliente</button>
+            {% if volver == 'factura' %}
+            <a class="btn-secundario btn-enlace" href="{% url 'nueva_factura' %}">Volver a la factura</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <section class="card">
+        <h2 class="card-titulo">Clientes registrados</h2>
+        <table class="tabla sin-derecha" style="margin-bottom: 0;">
+            <thead>
+                <tr>
+                    <th>Documento</th>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Correo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clientes %}
+                <tr>
+                    <td>{{ c.documento }}</td>
+                    <td>{{ c.nombre_completo }}</td>
+                    <td>{{ c.telefono|default:"—" }}</td>
+                    <td>{{ c.correo|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">Aún no hay clientes.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}

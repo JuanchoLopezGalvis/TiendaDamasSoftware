@@ -18,12 +18,18 @@
 
         <div class="fila-campos">
             <div class="campo campo-grande">
-                <label for="nombres">Nombres del cliente</label>
-                <input type="text" id="nombres" name="nombres" maxlength="100" autocomplete="off" required>
-            </div>
-            <div class="campo campo-grande">
-                <label for="apellidos">Apellidos del cliente</label>
-                <input type="text" id="apellidos" name="apellidos" maxlength="100" autocomplete="off" required>
+                <label for="cliente">Cliente</label>
+                <select id="cliente" name="cliente" required>
+                    <option value="" disabled {% if not cliente_nuevo %}selected{% endif %}>Selecciona un cliente…</option>
+                    {% for c in clientes %}
+                        <option value="{{ c.pk }}" {% if c.pk == cliente_nuevo %}selected{% endif %}>
+                            {{ c.documento }} · {{ c.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if perms.facturacion.add_cliente %}
+                <span class="ayuda">¿No está? <a href="{% url 'crear_cliente' %}?volver=factura">Crear cliente nuevo</a></span>
+                {% endif %}
             </div>
             <div class="campo">
                 <label for="fecha">Fecha</label>
@@ -41,10 +47,11 @@
                 <ul class="combo-lista" id="comboLista" hidden>
                     {% for p in productos %}
                     <li data-id="{{ p.id }}" data-codigo="{{ p.codigo }}"
-                        data-nombre="{{ p.nombre }}" data-precio="{{ p.precio }}">
+                        data-nombre="{{ p.nombre }}" data-precio="{{ p.precio }}" data-stock="{{ p.stock }}">
                         <span class="combo-id">{{ p.codigo }}</span>
                         <span>{{ p.nombre }}</span>
                         <span class="combo-precio"></span>
+                        <span class="combo-stock">{{ p.stock }} disp.</span>
                     </li>
                     {% endfor %}
                     <li class="combo-vacio" id="comboVacio" hidden>Sin resultados</li>
@@ -60,6 +67,7 @@
                     <th>Código</th>
                     <th>Producto</th>
                     <th>Cantidad</th>
+                    <th>Disponible</th>
                     <th>Precio</th>
                     <th>Subtotal</th>
                     <th></th>
@@ -67,7 +75,7 @@
             </thead>
             <tbody>
                 <tr id="filaVacia">
-                    <td colspan="6">Aún no hay productos. Escribe un código y pulsa «Agregar producto».</td>
+                    <td colspan="7">Aún no hay productos. Escribe un código y pulsa «Agregar producto».</td>
                 </tr>
             </tbody>
         </table>
@@ -90,6 +98,7 @@
                 <input type="hidden" name="producto">
                 <input type="number" class="input-tabla corto" name="cantidad" min="1" value="1" required>
             </td>
+            <td class="celda-stock"></td>
             <td class="celda-precio"></td>
             <td class="celda-subtotal">$0</td>
             <td><button type="button" class="btn-quitar" aria-label="Quitar producto">✕</button></td>

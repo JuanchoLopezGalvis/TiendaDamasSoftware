@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.db import models
 
 from TiendaDamas import settings
@@ -7,7 +8,11 @@ from TiendaDamas import settings
 # Create your models here.
 
 class Empleado(models.Model):
-    documento_identidad = models.CharField(max_length=50, primary_key=True)
+    # Cédula: solo números (se guarda como texto para no perder ceros a la izquierda)
+    documento_identidad = models.CharField(
+        max_length=50, primary_key=True,
+        validators=[RegexValidator(r'^[0-9]+$', 'Solo se permiten números.')],
+    )
     nombre_completo = models.CharField(max_length=50)
 
     def __str__(self):
@@ -27,6 +32,9 @@ class Auditoria(models.Model):
         ACCESO_DENEGADO = 'acceso_denegado', 'Acceso denegado'
         CAMBIO_ROL = 'cambio_rol', 'Cambio de rol'
         CREACION = 'creacion', 'Creación'
+        MODIFICACION = 'modificacion', 'Modificación'
+        DESCARGA = 'descarga', 'Descarga de reporte'
+        CIERRE_SESION = 'cierre_sesion', 'Cierre de sesión'
 
     fecha = models.DateTimeField(auto_now_add=True)
     usuario = models.ForeignKey(

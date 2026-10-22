@@ -1,13 +1,21 @@
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 
 PLAZO_DEVOLUCION_DIAS = 30   # días desde la fecha de la factura
 PLAZO_GARANTIA_DIAS = 90     # días desde la fecha de la factura
 
+SOLO_NUMEROS = RegexValidator(r'^[0-9]+$', 'Solo se permiten números.')
+
 
 class Cliente(models.Model):                          # CLIENTES
+    # Cédula: solo números (se guarda como texto para no perder ceros a la izquierda)
+    documento = models.CharField(max_length=15, primary_key=True,
+                                 validators=[SOLO_NUMEROS])   # id_cliente
     nombres = models.CharField(max_length=100)        # nombres_cliente
     apellidos = models.CharField(max_length=100)      # apellidos_cliente
+    telefono = models.CharField(max_length=15, validators=[SOLO_NUMEROS])
+    correo = models.EmailField(max_length=100)
 
     class Meta:
         ordering = ['nombres', 'apellidos']
@@ -24,6 +32,7 @@ class Producto(models.Model):                         # PRODUCTOS
     codigo = models.CharField(max_length=10, unique=True)      # extra: no está en el diagrama
     nombre_producto = models.CharField(max_length=100)
     precio_venta_unitario = models.PositiveIntegerField()
+    stock = models.PositiveIntegerField(default=0)              # unidades disponibles
     activo = models.BooleanField(default=True)                  # extra
 
     class Meta:

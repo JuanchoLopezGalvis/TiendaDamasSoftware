@@ -29,7 +29,8 @@
 
             <div class="campo">
                 <label for="documento">Documento de identidad</label>
-                <input type="text" id="documento" name="documento" maxlength="50"
+                <input type="text" id="documento" name="documento" maxlength="15"
+                       inputmode="numeric" pattern="[0-9]{5,15}" title="Solo números, entre 5 y 15 dígitos"
                        value="{{ valores.documento }}" required>
             </div>
 

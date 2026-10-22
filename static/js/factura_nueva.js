@@ -28,8 +28,10 @@
             id: li.dataset.id,
             codigo: li.dataset.codigo,
             nombre: li.dataset.nombre,
-            precio: precio
+            precio: precio,
+            stock: Number(li.dataset.stock)
         };
+        if (!catalogo[li.dataset.codigo].stock) { li.classList.add('agotado'); }
         li.querySelector('.combo-precio').textContent = formato.format(precio);
     });
 
@@ -70,10 +72,17 @@
         var total = 0;
         var valido = true;
 
+        var excedidos = [];
+
         filas().forEach(function (fila) {
             var precio = Number(fila.dataset.precio);
-            var cantidad = Number(fila.querySelector('input[name="cantidad"]').value || 0);
+            var input = fila.querySelector('input[name="cantidad"]');
+            var cantidad = Number(input.value || 0);
             var subtotal = precio * cantidad;
+            var excede = cantidad > Number(fila.dataset.stock);
+
+            input.classList.toggle('excedido', excede);
+            if (excede) { excedidos.push(fila.dataset.codigo); valido = false; }
 
             fila.querySelector('.celda-subtotal').textContent = formato.format(subtotal);
             total += subtotal;
@@ -83,10 +92,18 @@
         filaVacia.hidden = filas().length > 0;
         document.getElementById('totalFactura').textContent = formato.format(total);
         btnGenerar.disabled = !(filas().length > 0 && valido);
+        if (excedidos.length) {
+            mostrarError('No hay suficientes unidades de: ' + excedidos.join(', ') + '.');
+        }
     }
 
     function agregar(producto) {
         var existente = cuerpo.querySelector('tr[data-codigo="' + producto.codigo + '"]');
+
+        if (!producto.stock) {
+            mostrarError('El producto ' + producto.codigo + ' está agotado.');
+            return;
+        }
 
         if (existente) {
             var cantidad = existente.querySelector('input[name="cantidad"]');
@@ -95,6 +112,9 @@
             var fila = plantilla.content.firstElementChild.cloneNode(true);
             fila.dataset.codigo = producto.codigo;
             fila.dataset.precio = producto.precio;
+            fila.dataset.stock = producto.stock;
+            fila.querySelector('input[name="cantidad"]').max = producto.stock;
+            fila.querySelector('.celda-stock').textContent = producto.stock;
             fila.querySelector('.celda-codigo').textContent = producto.codigo;
             fila.querySelector('.celda-nombre').textContent = producto.nombre;
             fila.querySelector('.celda-precio').textContent = formato.format(producto.precio);
@@ -166,7 +186,7 @@
 
     document.getElementById('btnAgregarProducto').addEventListener('click', agregarCodigo);
 
-    cuerpo.addEventListener('input', actualizar);
+    cuerpo.addEventListener('input', function () { mostrarError(''); actualizar(); });
 
     cuerpo.addEventListener('click', function (e) {
         var quitar = e.target.closest('.btn-quitar');

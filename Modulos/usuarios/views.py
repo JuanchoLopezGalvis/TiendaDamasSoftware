@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render
 from itertools import groupby
+import re
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
@@ -8,6 +9,9 @@ from django.utils.crypto import get_random_string
 
 from Modulos.usuarios.models import Empleado, Usuario, Auditoria
 from Modulos.usuarios.auditoria import registrar
+from Modulos.facturacion import pdf
+
+MAX_PDF_BITACORA = 5000     # filas máximas en el PDF de la bitácora
 from django.contrib import messages
 from django.contrib.auth.models import Group, Permission
 from django.db.models import Count, Q
@@ -17,6 +21,7 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
 from django.core.exceptions import PermissionDenied
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 # Create your views here.
 ACCIONES = {
@@ -78,14 +83,17 @@ def crear_empleado(request):
     valores = {'documento': '', 'nombre': ''}
 
     if request.method == 'POST':
-        documento = request.POST.get('documento', '').strip()
+        # Se aceptan puntos, guiones y espacios al escribir (1.012.345), pero se guardan solo los dígitos
+        documento = re.sub(r'[\s.\-]', '', request.POST.get('documento', ''))
         nombre = request.POST.get('nombre', '').strip()
         valores = {'documento': documento, 'nombre': nombre}
 
         if not documento or not nombre:
             messages.error(request, 'Completa el documento y el nombre.')
-        elif len(documento) > 50 or len(nombre) > 50:
-            messages.error(request, 'El documento y el nombre admiten máximo 50 caracteres.')
+        elif not re.fullmatch(r'[0-9]{5,15}', documento):
+            messages.error(request, 'El documento debe tener solo números (entre 5 y 15 dígitos).')
+        elif len(nombre) > 50:
+            messages.error(request, 'El nombre admite máximo 50 caracteres.')
         elif Empleado.objects.filter(pk=documento).exists():
             messages.error(request, 'Ya existe un empleado con ese documento.')
         else:
@@ -330,6 +338,7 @@ def asignacion_roles(request):
                 usuario.is_active = not usuario.is_active
                 usuario.save(update_fields=['is_active'])
                 estado = 'activada' if usuario.is_active else 'desactivada'
+                registrar(request, Auditoria.Evento.MODIFICACION, f'Cuenta de {nombre} {estado}')
                 messages.success(request, f'Cuenta de "{nombre}" {estado}.')
 
         return redirect(url)
@@ -387,7 +396,41 @@ def bitacora_auditoria(request):
     if tipo in Auditoria.Evento.values:
         registros = registros.filter(evento=tipo)
 
+    if request.GET.get('formato') == 'pdf':
+        total = registros.count()
+        filtros = [
+            ('Desde', _fecha(desde).strftime('%d/%m/%Y') if _fecha(desde) else 'El inicio'),
+            ('Hasta', _fecha(hasta).strftime('%d/%m/%Y') if _fecha(hasta) else 'Hoy'),
+            ('Tipo de evento', dict(Auditoria.Evento.choices).get(tipo, 'Todos')),
+        ]
+        filas = [[
+            timezone.localtime(r.fecha).strftime('%d/%m/%Y %H:%M'),
+            pdf.celda(r.usuario_texto or 'Desconocido'),
+            pdf.celda(r.get_evento_display()),
+            pdf.celda(r.detalle),
+            r.ip or '-',
+        ] for r in registros[:MAX_PDF_BITACORA]]
+        # Se registra después de leer las filas, para que la propia descarga no salga en el PDF
+        registrar(request, Auditoria.Evento.DESCARGA,
+                  'Bitácora de auditoría en PDF (' + ', '.join(f'{k}: {v}' for k, v in filtros) + ')')
+        contenido = [
+            pdf.parrafo(f'{total} registro{"s" if total != 1 else ""}'
+                        + (f' (se incluyen los {MAX_PDF_BITACORA} más recientes)' if total > MAX_PDF_BITACORA else '')),
+            pdf.Spacer(1, 0.3 * pdf.cm),
+            pdf.tabla(
+                ['Fecha y hora', 'Usuario', 'Evento', 'Detalle', 'IP'],
+                filas or [['No hay registros con esos filtros.', '', '', '', '']],
+                anchos=[2.7 * pdf.cm, 2.6 * pdf.cm, 2.8 * pdf.cm, 6.6 * pdf.cm, 2.3 * pdf.cm],
+            ),
+        ]
+        return pdf.reporte('Bitácora de auditoría', filtros, contenido, request.user,
+                           f'bitacora_auditoria_{timezone.localdate():%Y-%m-%d}.pdf')
+
+    q = request.GET.copy()
+    q['formato'] = 'pdf'
+
     return render(request, 'bitacora.html', {
+        'url_pdf': '?' + q.urlencode(),
         'registros': registros[:200],
         'total': registros.count(),
         'eventos': Auditoria.Evento.choices,
@@ -400,6 +443,11 @@ class CambiarClaveView(SuccessMessageMixin, PasswordChangeView):
     template_name = 'cambiar_clave.html'
     success_url = reverse_lazy('cambiar_clave')
     success_message = 'Tu contraseña se actualizó correctamente.'
+
+    def form_valid(self, form):
+        respuesta = super().form_valid(form)
+        registrar(self.request, Auditoria.Evento.MODIFICACION, 'Cambió su contraseña')
+        return respuesta
 
 
 def recuperar_clave(request):
@@ -419,6 +467,9 @@ def recuperar_clave(request):
             clave = get_random_string(12)
             usuario.set_password(clave)
             usuario.save(update_fields=['password'])
+            registrar(request, Auditoria.Evento.MODIFICACION,
+                      'Recuperación de contraseña: se envió una clave temporal al correo',
+                      usuario=usuario)
             try:
                 send_mail(
                     'Recuperación de contraseña - TiendaDamas',

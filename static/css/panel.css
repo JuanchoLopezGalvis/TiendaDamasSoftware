@@ -373,6 +373,7 @@ select.input-tabla { border-style: dashed; background-color: var(--soft); min-wi
 .filtros .campo input,
 .filtros .campo select { height: 48px; font-size: 16px; }
 .filtros .btn-secundario { height: 48px; }
+.filtros .btn-enlace { display: inline-flex; align-items: center; height: 48px; box-sizing: border-box; }
 
 /* Tabla */
 .tabla { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 16px; }
@@ -500,6 +501,9 @@ select.input-tabla { border-style: dashed; background-color: var(--soft); min-wi
 .combo-lista li:hover { background-color: var(--soft); }
 .combo-id { min-width: 90px; font-weight: 700; color: var(--muted); }
 .combo-precio { margin-left: auto; color: var(--muted); }
+.combo-stock { min-width: 70px; text-align: right; font-size: 13px; color: var(--muted); }
+.combo-lista li.agotado { opacity: .5; }
+.input-tabla.excedido { border-color: #d1242f; }
 .combo-lista li.combo-vacio { color: var(--muted); cursor: default; }
 .combo-lista li.combo-vacio:hover { background: none; }
 

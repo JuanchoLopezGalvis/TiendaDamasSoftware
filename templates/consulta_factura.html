@@ -6,7 +6,7 @@
 <div class="pagina">
 
     <h1 class="pagina-titulo">Consulta de facturas</h1>
-    <p class="pagina-sub">Estado y consulta de facturas</p>
+    <p class="pagina-sub">Busca facturas por número, cliente o fecha</p>
 
     <section class="card">
 
@@ -16,21 +16,12 @@
                 <input type="text" id="numero" name="numero" value="{{ f.numero }}">
             </div>
             <div class="campo">
-                <label for="cliente">Cliente</label>
+                <label for="cliente">Cliente (nombre o documento)</label>
                 <input type="text" id="cliente" name="cliente" value="{{ f.cliente }}">
             </div>
             <div class="campo">
                 <label for="fecha">Fecha</label>
                 <input type="date" id="fecha" name="fecha" value="{{ f.fecha }}">
-            </div>
-            <div class="campo">
-                <label for="estado">Estado</label>
-                <select id="estado" name="estado" style="width: 160px;">
-                    <option value="">Todos</option>
-                    {% for valor, etiqueta in estados %}
-                        <option value="{{ valor }}" {% if f.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
-                    {% endfor %}
-                </select>
             </div>
             <button type="submit" class="btn-secundario">Buscar</button>
         </form>
@@ -42,7 +33,6 @@
                     <th>Cliente</th>
                     <th>Fecha</th>
                     <th>Total</th>
-                    <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
@@ -52,10 +42,9 @@
                     <td>{{ fa.cliente }}</td>
                     <td>{{ fa.fecha }}</td>
                     <td>{{ fa.total }}</td>
-                    <td><span class="pill {{ fa.clase }}">{{ fa.estado }}</span></td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5">No hay facturas.</td></tr>
+                <tr><td colspan="4">No hay facturas.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
