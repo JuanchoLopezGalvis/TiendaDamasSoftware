@@ -597,6 +597,25 @@ ESTADOS_ABIERTOS = [
 ]
 
 
+def _lineas_garantia(factura):
+    """Productos de la factura con las unidades que aún pueden entrar en garantía:
+    lo comprado menos lo devuelto y lo que ya está en una garantía abierta."""
+    devuelto = (DetalleDevolucion.objects.filter(detalle_factura=OuterRef('pk'))
+                .values('detalle_factura').annotate(s=Sum('cantidad')).values('s'))
+    en_garantia = (Garantia.objects.filter(detalle_factura=OuterRef('pk'),
+                                           estado__in=ESTADOS_ABIERTOS)
+                   .values('detalle_factura').annotate(s=Sum('cantidad')).values('s'))
+    detalles = factura.detalles.select_related('producto').annotate(
+        devuelto=Coalesce(Subquery(devuelto), 0),
+        en_garantia=Coalesce(Subquery(en_garantia), 0),
+    ).order_by('pk')
+    return [{
+        'detalle': d,
+        'comprado': d.cantidad,
+        'disponible': max(0, d.cantidad - d.devuelto - d.en_garantia),
+    } for d in detalles]
+
+
 def _problemas_garantia(factura):
     problemas = []
     if factura.estado == Factura.Estado.ANULADA:
@@ -637,16 +656,21 @@ def solicitud_garantia(request):
                 return redirect(url)
             back = f'{url}?factura={factura.numero}'
 
-            detalle = factura.detalles.select_related('producto').filter(
-                pk=_entero(request.POST.get('detalle'))).first()
+            pk = _entero(request.POST.get('detalle'))
+            linea = next((l for l in _lineas_garantia(factura) if l['detalle'].pk == pk), None)
             descripcion = request.POST.get('descripcion', '').strip()[:1000]
 
             errores = _problemas_garantia(factura)
-            if detalle is None:
+            cant = None
+            if linea is None:
                 errores.append('Selecciona un producto de la factura.')
-            elif Garantia.objects.filter(
-                    detalle_factura=detalle, estado__in=ESTADOS_ABIERTOS).exists():
-                errores.append('Ese producto ya tiene una garantía en curso.')
+            elif not linea['disponible']:
+                errores.append('Ese producto no tiene unidades disponibles para garantía '
+                               '(ya fueron devueltas o están en una garantía en curso).')
+            else:
+                cant = _entero(request.POST.get('cantidad'), 1, linea['disponible'])
+                if cant is None:
+                    errores.append(f'Cantidad no válida (máximo {linea["disponible"]}).')
             if not descripcion:
                 errores.append('Describe la falla del producto.')
 
@@ -655,10 +679,12 @@ def solicitud_garantia(request):
                     messages.error(request, e)
                 return redirect(back)
 
+            detalle = linea['detalle']
             garantia = Garantia.objects.create(
-                detalle_factura=detalle, descripcion=descripcion, usuario_vendedor=u)
+                detalle_factura=detalle, cantidad=cant,
+                descripcion=descripcion, usuario_vendedor=u)
             registrar(request, Auditoria.Evento.CREACION,
-                      f'Garantía {garantia.numero}: {detalle.producto.nombre_producto} '
+                      f'Garantía {garantia.numero}: {cant} × {detalle.producto.nombre_producto} '
                       f'(factura {factura.numero})')
             messages.success(request, f'Solicitud {garantia.numero} creada.')
             return redirect(url)
@@ -713,14 +739,17 @@ def solicitud_garantia(request):
 
     # ---------- Mostrar ----------
     texto = request.GET.get('factura', '').strip()
-    factura, detalles, problemas = None, [], []
+    factura, lineas, problemas = None, [], []
     if texto and puede_crear:
         factura = _buscar_factura(texto)
         if factura is None:
             messages.error(request, f'No existe la factura "{texto}".')
         else:
-            detalles = list(factura.detalles.select_related('producto').order_by('pk'))
+            lineas = _lineas_garantia(factura)
             problemas = _problemas_garantia(factura)
+            if not any(l['disponible'] for l in lineas):
+                problemas.append('Ningún producto de esta factura tiene unidades disponibles '
+                                 'para garantía.')
 
     Estado = Garantia.Estado
     garantias = Garantia.objects.select_related(
@@ -734,7 +763,7 @@ def solicitud_garantia(request):
 
     return render(request, 'garantia.html', {
         'puede_crear': puede_crear,
-        'texto': texto, 'factura': factura, 'detalles': detalles, 'problemas': problemas,
+        'texto': texto, 'factura': factura, 'lineas': lineas, 'problemas': problemas,
         'plazo': PLAZO_GARANTIA_DIAS,
         'filas': filas,
     })
@@ -785,7 +814,8 @@ def reporte_dg(request):
     grupos = {}
 
     def grupo(k):
-        return grupos.setdefault(k, {'dev': 0, 'uds': 0, 'gar': 0, 'motivos': Counter()})
+        return grupos.setdefault(
+            k, {'dev': 0, 'uds': 0, 'gar': 0, 'uds_gar': 0, 'motivos': Counter()})
 
     for l in devs:
         g = grupo(clave(l.detalle_factura, l.devolucion.fecha_devolucion))
@@ -793,7 +823,9 @@ def reporte_dg(request):
         g['uds'] += l.cantidad
         g['motivos'][l.devolucion.get_motivo_display()] += 1
     for gr in gars:
-        grupo(clave(gr.detalle_factura, gr.fecha_solicitud))['gar'] += 1
+        g = grupo(clave(gr.detalle_factura, gr.fecha_solicitud))
+        g['gar'] += 1
+        g['uds_gar'] += gr.cantidad
 
     filas = []
     for nombre, g in grupos.items():
@@ -803,6 +835,7 @@ def reporte_dg(request):
             'devoluciones': g['dev'],
             'unidades': g['uds'],
             'garantias': g['gar'],
+            'unidades_gar': g['uds_gar'],
             'motivo': top[0][0] if top else '—',
         })
 
@@ -815,19 +848,22 @@ def reporte_dg(request):
     total_dev = sum(f['devoluciones'] for f in filas)
     total_uds = sum(f['unidades'] for f in filas)
     total_gar = sum(f['garantias'] for f in filas)
+    total_uds_gar = sum(f['unidades_gar'] for f in filas)
 
     if request.GET.get('formato') == 'pdf':
         p = Producto.objects.filter(pk=_entero(producto)).first() if _entero(producto) else None
         contenido = [
             pdf.tabla(
                 [titulo_grupo, 'N.º devoluciones', 'Unidades devueltas', 'N.º garantías',
-                 'Motivo más frecuente'],
-                [[f['grupo'], f['devoluciones'], f['unidades'], f['garantias'], f['motivo']]
-                 for f in filas]
-                or [['No hay devoluciones ni garantías con estos filtros.', '', '', '', '']],
-                derecha=(1, 2, 3),
-                total=['Total', total_dev, total_uds, total_gar, ''] if len(filas) > 1 else None,
-                anchos=[4.4 * pdf.cm, 3.0 * pdf.cm, 3.4 * pdf.cm, 2.4 * pdf.cm, 3.8 * pdf.cm],
+                 'Unidades en garantía', 'Motivo más frecuente'],
+                [[f['grupo'], f['devoluciones'], f['unidades'], f['garantias'],
+                  f['unidades_gar'], f['motivo']] for f in filas]
+                or [['No hay devoluciones ni garantías con estos filtros.', '', '', '', '', '']],
+                derecha=(1, 2, 3, 4),
+                total=(['Total', total_dev, total_uds, total_gar, total_uds_gar, '']
+                       if len(filas) > 1 else None),
+                anchos=[3.8 * pdf.cm, 2.6 * pdf.cm, 2.8 * pdf.cm, 2.2 * pdf.cm, 2.6 * pdf.cm,
+                        3.0 * pdf.cm],
             ),
             pdf.Spacer(1, 0.4 * pdf.cm),
             pdf.parrafo(
@@ -857,5 +893,6 @@ def reporte_dg(request):
         'total_dev': total_dev,
         'total_uds': total_uds,
         'total_gar': total_gar,
+        'total_uds_gar': total_uds_gar,
         'titulo_grupo': titulo_grupo,
     })

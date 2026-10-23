@@ -133,6 +133,7 @@ class Garantia(models.Model):                         # GARANTIA
     detalle_factura = models.ForeignKey(
         DetalleFactura, on_delete=models.PROTECT, related_name='garantias'
     )
+    cantidad = models.PositiveIntegerField(default=1)
     descripcion = models.TextField(max_length=1000)
     estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.SOLICITADA)
     usuario_vendedor = models.ForeignKey(

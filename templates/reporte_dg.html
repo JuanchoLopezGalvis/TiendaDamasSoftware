@@ -60,6 +60,7 @@
                     <th>N.º devoluciones</th>
                     <th>Unidades devueltas</th>
                     <th>N.º garantías</th>
+                    <th>Unidades en garantía</th>
                     <th>Motivo más frecuente</th>
                 </tr>
             </thead>
@@ -70,10 +71,11 @@
                     <td>{{ f.devoluciones }}</td>
                     <td>{{ f.unidades }}</td>
                     <td>{{ f.garantias }}</td>
+                    <td>{{ f.unidades_gar }}</td>
                     <td>{{ f.motivo }}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5">No hay devoluciones ni garantías con estos filtros.</td></tr>
+                <tr><td colspan="6">No hay devoluciones ni garantías con estos filtros.</td></tr>
                 {% endfor %}
                 {% if filas|length > 1 %}
                 <tr>
@@ -81,6 +83,7 @@
                     <td><strong>{{ total_dev }}</strong></td>
                     <td><strong>{{ total_uds }}</strong></td>
                     <td><strong>{{ total_gar }}</strong></td>
+                    <td><strong>{{ total_uds_gar }}</strong></td>
                     <td></td>
                 </tr>
                 {% endif %}

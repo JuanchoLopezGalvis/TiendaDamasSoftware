@@ -48,10 +48,20 @@
                             <label for="detalle">Producto</label>
                             <select id="detalle" name="detalle" required {% if problemas %}disabled{% endif %}>
                                 <option value="" selected disabled>Seleccionar producto…</option>
-                                {% for d in detalles %}
-                                    <option value="{{ d.pk }}">{{ d.producto.codigo }} · {{ d.producto.nombre_producto }}</option>
+                                {% for l in lineas %}
+                                    <option value="{{ l.detalle.pk }}" data-disponible="{{ l.disponible }}"
+                                            {% if not l.disponible %}disabled{% endif %}>
+                                        {{ l.detalle.producto.codigo }} · {{ l.detalle.producto.nombre_producto }}
+                                        ({{ l.disponible }} de {{ l.comprado }} disponibles)
+                                    </option>
                                 {% endfor %}
                             </select>
+                        </div>
+
+                        <div class="campo">
+                            <label for="cantidad">Cantidad</label>
+                            <input type="number" id="cantidad" name="cantidad" class="input-tabla corto"
+                                   value="1" min="1" required {% if problemas %}disabled{% endif %}>
                         </div>
 
                         <div class="campo">
@@ -71,6 +81,18 @@
                         <a class="btn-secundario btn-enlace" href="{% url 'solicitud_garantia' %}">Cancelar</a>
                     </div>
                 </form>
+                <script>
+                    // El máximo de la cantidad sigue al producto elegido
+                    (function () {
+                        const sel = document.getElementById('detalle');
+                        const cant = document.getElementById('cantidad');
+                        sel.addEventListener('change', function () {
+                            const max = sel.selectedOptions[0].dataset.disponible;
+                            cant.max = max;
+                            if (+cant.value > +max) cant.value = max;
+                        });
+                    })();
+                </script>
             {% else %}
                 <p class="nota">Busca la factura para elegir el producto.</p>
             {% endif %}
@@ -98,7 +120,7 @@
                             <small style="color: var(--muted);">Fact. {{ f.g.detalle_factura.factura.numero }} · {{ f.g.fecha_solicitud|date:"d/m/Y" }}</small>
                         </td>
                         <td>
-                            {{ f.g.detalle_factura.producto.nombre_producto }}<br>
+                            {{ f.g.cantidad }} × {{ f.g.detalle_factura.producto.nombre_producto }}<br>
                             <small style="color: var(--muted);">{{ f.g.descripcion|truncatechars:70 }}</small>
                         </td>
                         <td>
