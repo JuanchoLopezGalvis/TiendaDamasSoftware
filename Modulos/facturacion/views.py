@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db import transaction
-from django.db.models import Count,F, Q, Sum
+from django.db.models import Count,F, OuterRef, Q, Subquery, Sum
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -51,7 +51,15 @@ def _entero(texto, minimo=1, maximo=10**9):
 @login_required
 @permission_required('facturacion.view_factura', raise_exception=True)
 def consulta_facturas(request):
-    facturas = Factura.objects.select_related('cliente')
+    # Unidades compradas y devueltas (subconsultas para no duplicar sumas por los joins)
+    comprado = (DetalleFactura.objects.filter(factura=OuterRef('pk'))
+                .values('factura').annotate(s=Sum('cantidad')).values('s'))
+    devuelto = (DetalleDevolucion.objects.filter(detalle_factura__factura=OuterRef('pk'))
+                .values('detalle_factura__factura').annotate(s=Sum('cantidad')).values('s'))
+    facturas = Factura.objects.select_related('cliente').annotate(
+        unidades=Coalesce(Subquery(comprado), 0),
+        devueltas=Coalesce(Subquery(devuelto), 0),
+    )
 
     numero = request.GET.get('numero', '').strip()
     cliente = request.GET.get('cliente', '').strip()
@@ -80,9 +88,20 @@ def consulta_facturas(request):
             'cliente': f.cliente.nombre_completo,
             'fecha': f.fecha_factura.strftime('%d/%m/%Y'),
             'total': _cop(f.total),
+            'estado': _estado_factura(f),
         } for f in facturas[:200]],
         'f': {'numero': numero, 'cliente': cliente, 'fecha': fecha},
     })
+
+def _estado_factura(f):
+    """(texto, clase de la píldora) según si está anulada o tiene devoluciones."""
+    if f.estado == Factura.Estado.ANULADA:
+        return 'Anulada', 'pill-error'
+    if f.devueltas and f.devueltas >= f.unidades:
+        return 'Devuelta', 'pill-off'
+    if f.devueltas:
+        return 'Devolución parcial', 'pill-warn'
+    return 'Activa', 'pill-ok'
 
 @login_required
 @permission_required('facturacion.add_factura', raise_exception=True)
@@ -766,11 +785,12 @@ def reporte_dg(request):
     grupos = {}
 
     def grupo(k):
-        return grupos.setdefault(k, {'dev': 0, 'gar': 0, 'motivos': Counter()})
+        return grupos.setdefault(k, {'dev': 0, 'uds': 0, 'gar': 0, 'motivos': Counter()})
 
     for l in devs:
         g = grupo(clave(l.detalle_factura, l.devolucion.fecha_devolucion))
         g['dev'] += 1
+        g['uds'] += l.cantidad
         g['motivos'][l.devolucion.get_motivo_display()] += 1
     for gr in gars:
         grupo(clave(gr.detalle_factura, gr.fecha_solicitud))['gar'] += 1
@@ -781,6 +801,7 @@ def reporte_dg(request):
         filas.append({
             'grupo': nombre,
             'devoluciones': g['dev'],
+            'unidades': g['uds'],
             'garantias': g['gar'],
             'motivo': top[0][0] if top else '—',
         })
@@ -792,18 +813,21 @@ def reporte_dg(request):
 
     titulo_grupo = {'producto': 'Producto', 'cliente': 'Clienta', 'mes': 'Mes'}[agrupar]
     total_dev = sum(f['devoluciones'] for f in filas)
+    total_uds = sum(f['unidades'] for f in filas)
     total_gar = sum(f['garantias'] for f in filas)
 
     if request.GET.get('formato') == 'pdf':
         p = Producto.objects.filter(pk=_entero(producto)).first() if _entero(producto) else None
         contenido = [
             pdf.tabla(
-                [titulo_grupo, 'N.º devoluciones', 'N.º garantías', 'Motivo más frecuente'],
-                [[f['grupo'], f['devoluciones'], f['garantias'], f['motivo']] for f in filas]
-                or [['No hay devoluciones ni garantías con estos filtros.', '', '', '']],
-                derecha=(1, 2),
-                total=['Total', total_dev, total_gar, ''] if len(filas) > 1 else None,
-                anchos=[7 * pdf.cm, 3.2 * pdf.cm, 3 * pdf.cm, 3.8 * pdf.cm],
+                [titulo_grupo, 'N.º devoluciones', 'Unidades devueltas', 'N.º garantías',
+                 'Motivo más frecuente'],
+                [[f['grupo'], f['devoluciones'], f['unidades'], f['garantias'], f['motivo']]
+                 for f in filas]
+                or [['No hay devoluciones ni garantías con estos filtros.', '', '', '', '']],
+                derecha=(1, 2, 3),
+                total=['Total', total_dev, total_uds, total_gar, ''] if len(filas) > 1 else None,
+                anchos=[4.4 * pdf.cm, 3.0 * pdf.cm, 3.4 * pdf.cm, 2.4 * pdf.cm, 3.8 * pdf.cm],
             ),
             pdf.Spacer(1, 0.4 * pdf.cm),
             pdf.parrafo(
@@ -831,6 +855,7 @@ def reporte_dg(request):
         'motivos': Devolucion.Motivo.choices,
         'filas': filas,
         'total_dev': total_dev,
+        'total_uds': total_uds,
         'total_gar': total_gar,
         'titulo_grupo': titulo_grupo,
     })
