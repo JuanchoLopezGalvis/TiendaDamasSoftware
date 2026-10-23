@@ -58,13 +58,18 @@
             </div>
 
             <div class="campo">
-                <label for="rol">Rol inicial</label>
-                <select id="rol" name="rol" required>
-                    <option value="" disabled {% if not datos.rol %}selected{% endif %}>Seleccionar rol</option>
+                <label>Roles iniciales</label>
+                <div class="lista-permisos" id="listaRoles" style="margin-top:6px;">
                     {% for g in grupos %}
-                    <option value="{{ g.pk }}" {% if datos.rol == g.pk|stringformat:"s" %}selected{% endif %}>{{ g.name }}</option>
+                    <label class="opcion">
+                        <input type="checkbox" name="roles" value="{{ g.pk }}"
+                               {% if g.pk|stringformat:"s" in roles_marcados %}checked{% endif %}>
+                        {{ g.name }}
+                    </label>
+                    {% empty %}
+                    <p>No hay roles creados.</p>
                     {% endfor %}
-                </select>
+                </div>
             </div>
 
         </div>
@@ -161,6 +166,20 @@
             e.preventDefault();
             buscar.setCustomValidity('Elige un empleado de la lista');
             buscar.reportValidity();
+            return;
+        }
+        var roles = form.querySelectorAll('input[name="roles"]');
+        var marcado = Array.prototype.some.call(roles, function (c) { return c.checked; });
+        if (roles.length && !marcado) {
+            e.preventDefault();
+            roles[0].setCustomValidity('Selecciona al menos un rol');
+            roles[0].reportValidity();
+        }
+    });
+
+    form.addEventListener('change', function (e) {
+        if (e.target.name === 'roles') {
+            form.querySelectorAll('input[name="roles"]').forEach(function (c) { c.setCustomValidity(''); });
         }
     });
 

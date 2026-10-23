@@ -37,7 +37,7 @@
             <thead>
                 <tr>
                     <th>Usuario</th>
-                    <th>Rol</th>
+                    <th>Roles</th>
                     <th>Estado</th>
                     <th></th>
                 </tr>
@@ -62,7 +62,7 @@
                                 data-id="{{ u.pk }}"
                                 data-nombre="{{ u.username }}"
                                 data-activo="{% if u.is_active %}1{% else %}0{% endif %}"
-                                data-rol="{% for g in u.groups.all %}{% if forloop.first %}{{ g.pk }}{% endif %}{% endfor %}">
+                                data-roles="{% for g in u.groups.all %}{{ g.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
                             Gestionar
                         </button>
                     </td>
@@ -92,17 +92,21 @@
         <input type="hidden" name="usuario" id="dlgUsuarioRol">
 
         <div class="campo">
-            <label for="dlgRol">Rol</label>
-            <select id="dlgRol" name="rol">
-                <option value="">Sin rol</option>
+            <label>Roles</label>
+            <div id="dlgRoles" class="lista-permisos" style="margin-top:6px;">
                 {% for g in grupos %}
-                    <option value="{{ g.pk }}">{{ g.name }}</option>
+                <label class="opcion">
+                    <input type="checkbox" name="roles" value="{{ g.pk }}">
+                    {{ g.name }}
+                </label>
+                {% empty %}
+                <p>No hay roles creados.</p>
                 {% endfor %}
-            </select>
+            </div>
         </div>
 
         <div class="acciones" style="margin-top:12px;">
-            <button type="submit" class="btn-crear">Guardar rol</button>
+            <button type="submit" class="btn-crear">Guardar roles</button>
         </div>
     </form>
 
@@ -128,7 +132,10 @@
             document.getElementById('dlgTitulo').textContent = 'Gestionar: ' + btn.dataset.nombre;
             document.getElementById('dlgUsuarioRol').value = btn.dataset.id;
             document.getElementById('dlgUsuarioEstado').value = btn.dataset.id;
-            document.getElementById('dlgRol').value = btn.dataset.rol;
+            var roles = btn.dataset.roles ? btn.dataset.roles.split(',') : [];
+            document.querySelectorAll('#dlgRoles input[name="roles"]').forEach(function (chk) {
+                chk.checked = roles.indexOf(chk.value) !== -1;
+            });
             document.getElementById('dlgBtnEstado').textContent =
                 btn.dataset.activo === '1' ? 'Desactivar cuenta' : 'Activar cuenta';
             dlg.showModal();

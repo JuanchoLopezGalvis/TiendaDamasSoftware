@@ -116,8 +116,7 @@ def registro_usuario(request):
         username = datos.get('username', '').strip()
         correo = datos.get('correo', '').strip()
         empleado = empleados.filter(pk=datos.get('empleado')).first()
-        rol_id = datos.get('rol', '')
-        grupo = grupos.filter(pk=rol_id).first() if rol_id.isdigit() else None
+        roles = grupos.filter(pk__in=[r for r in datos.getlist('roles') if r.isdigit()])
 
         errores = []
         if empleado is None:
@@ -130,8 +129,8 @@ def registro_usuario(request):
             validate_email(correo)
         except ValidationError:
             errores.append('Escribe un correo válido.')
-        if grupo is None:
-            errores.append('Selecciona un rol.')
+        if not roles:
+            errores.append('Selecciona al menos un rol.')
 
         if not errores:
             clave = get_random_string(12)
@@ -141,8 +140,9 @@ def registro_usuario(request):
                 password=clave,
                 empleado=empleado,
             )
-            usuario.groups.add(grupo)
-            registrar(request, Auditoria.Evento.CREACION, f'Usuario {username} con rol {grupo.name}')
+            usuario.groups.set(roles)
+            nombres_roles = ', '.join(g.name for g in roles)
+            registrar(request, Auditoria.Evento.CREACION, f'Usuario {username} con rol(es) {nombres_roles}')
 
             try:
                 send_mail(
@@ -172,6 +172,7 @@ def registro_usuario(request):
         'empleados': empleados,
         'grupos': grupos,
         'datos': datos,
+        'roles_marcados': datos.getlist('roles') if datos else [],
     })
 
 @login_required
@@ -233,7 +234,7 @@ def roles_permisos(request):
                 messages.error(
                     request,
                     f'No se puede eliminar "{grupo.name}": tiene {asignados} '
-                    f'usuario(s) asignado(s). Cámbiales el rol primero.')
+                    f'usuario(s) asignado(s). Quítales este rol primero.')
                 return redirect(f'{url}?rol={grupo.pk}')
             nombre = grupo.name
             grupo.delete()
@@ -318,18 +319,19 @@ def asignacion_roles(request):
         nombre = usuario.get_username()
 
         if accion == 'asignar':
-            rol_id = request.POST.get('rol', '')
-            if rol_id == '':
-                usuario.groups.clear()
-                registrar(request, Auditoria.Evento.CAMBIO_ROL, f'Se quitó el rol a {nombre}')
-                messages.success(request, f'Se quitó el rol a "{nombre}".')
-            elif rol_id.isdigit():
-                grupo = get_object_or_404(Group, pk=rol_id)
-                usuario.groups.set([grupo])
-                registrar(request, Auditoria.Evento.CAMBIO_ROL, f'{nombre} ahora tiene el rol {grupo.name}')
-                messages.success(request, f'"{nombre}" ahora tiene el rol "{grupo.name}".')
-            else:
+            ids = request.POST.getlist('roles')
+            if not all(r.isdigit() for r in ids):
                 messages.error(request, 'Rol no válido.')
+                return redirect(url)
+            roles = list(Group.objects.filter(pk__in=ids).order_by('name'))
+            usuario.groups.set(roles)
+            if roles:
+                nombres_roles = ', '.join(g.name for g in roles)
+                registrar(request, Auditoria.Evento.CAMBIO_ROL, f'{nombre} ahora tiene el/los rol(es) {nombres_roles}')
+                messages.success(request, f'"{nombre}" ahora tiene: {nombres_roles}.')
+            else:
+                registrar(request, Auditoria.Evento.CAMBIO_ROL, f'Se quitaron los roles a {nombre}')
+                messages.success(request, f'Se quitaron los roles a "{nombre}".')
 
         elif accion == 'estado':
             if usuario.pk == request.user.pk:

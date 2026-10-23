@@ -63,7 +63,7 @@
                     <td>{{ u.username }}</td>
                     <td>{{ u.empleado.nombre_completo }}</td>
                     <td>{{ u.email }}</td>
-                    <td>{% for g in u.groups.all %}{{ g.name }}{% empty %}Sin rol{% endfor %}</td>
+                    <td>{% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% empty %}Sin rol{% endfor %}</td>
                     <td>{% if u.is_active %}Activo{% else %}Inactivo{% endif %}</td>
                 </tr>
                 {% empty %}
